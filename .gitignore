@@ -1,0 +1,4 @@
+/.ruby-*
+/coverage
+/pkg
+/tmp
