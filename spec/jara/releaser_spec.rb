@@ -6,11 +6,11 @@ require 'spec_helper'
 module Jara
   describe Releaser do
     let :production_releaser do
-      described_class.new('production', shell: shell, archiver: archiver, file_system: file_system)
+      described_class.new('production', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3)
     end
 
     let :staging_releaser do
-      described_class.new('staging', shell: shell, archiver: archiver, file_system: file_system)
+      described_class.new('staging', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3)
     end
 
     let :shell do
@@ -23,6 +23,10 @@ module Jara
 
     let :file_system do
       double(:file_system)
+    end
+
+    let :s3 do
+      double(:s3)
     end
 
     let :executed_commands do
@@ -207,7 +211,81 @@ module Jara
     end
 
     describe '#release' do
+      let :sha do
+        'bdd18c1fce7213525a13d4d2d07fd42bc8f435b8'
+      end
 
+      let :exec_handler do
+        lambda do |command|
+          case command
+          when /git rev-parse \w+ \&\& git rev-parse origin\/\w+/
+            "#{sha}\n#{sha}\n"
+          when /^git clone \S+ \. \&\& git checkout [a-f0-9]{40}$/
+            nil
+          else
+            raise 'Unsupported command: `%s`' % command
+          end
+        end
+      end
+
+      let :s3_puts do
+        []
+      end
+
+      before do
+        s3.stub(:put_object) do |options|
+          s3_puts << options
+        end
+        file_system.stub(:cp) do |path, to_dir|
+          FileUtils.mkdir_p(to_dir)
+          File.open(File.join(to_dir, File.basename(path)), 'w') { |io| io.puts('foo') }
+        end
+      end
+
+      it 'builds an artifact for the specified environment' do
+        production_releaser.release
+        staging_releaser.release
+        command = executed_commands.find { |c| c.include?('git rev-parse master') }
+        command.should_not be_nil
+        command = executed_commands.find { |c| c.include?('git rev-parse staging') }
+        command.should_not be_nil
+        archiver.should have_received(:create).twice
+      end
+
+      it 'uploads the artifact' do
+        production_releaser.release
+        File.read(s3_puts.last[:body].path).should == "foo\n"
+      end
+
+      it 'uploads the artifact to S3 into a directory named after the environment' do
+        production_releaser.release
+        s3_puts.last[:bucket].should == 'artifact-bucket'
+        s3_puts.last[:key].should start_with('production/fake_app/fake_app-production-')
+      end
+
+      it 'uploads the artifact with an appropriate content type' do
+        production_releaser.release
+        s3_puts.last[:content_type].should == 'application/java-archive'
+      end
+
+      it 'uploads the artifact and sends its MD5 sum' do
+        production_releaser.release
+        s3_puts.last[:content_md5].should == 'd3b07384d113edec49eaa6238ad5ff00'
+      end
+
+      it 'sets metadata that includes who built the artifact and the full SHA' do
+        production_releaser.release
+        s3_puts.last[:metadata].should include('packaged_by' => "#{ENV['USER']}@#{ENV['HOST']}")
+        s3_puts.last[:metadata].should include('sha' => sha)
+      end
+
+      it 'uses an existing artifact for the same SHA' do
+        FileUtils.mkdir_p('build/production')
+        File.open("build/production/fake_app-production-201404091632-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
+        production_releaser.release
+        archiver.should_not have_received(:create)
+        s3_puts.last[:content_md5].should == 'c157a79031e1c40f85931829bc5fc552'
+      end
     end
   end
 end
