@@ -59,6 +59,17 @@ module Jara
       file_system.stub(:cp)
     end
 
+    around do |example|
+      Dir.mktmpdir do |path|
+        app_dir = File.join(path, 'fake_app')
+        FileUtils.mkdir_p(app_dir)
+        Dir.chdir(app_dir) do
+          FileUtils.mkdir('.git')
+          example.call
+        end
+      end
+    end
+
     describe '#build_artifact' do
       let :master_sha do
         'bdd18c1fce7213525a13d4d2d07fd42bc8f435b8'
@@ -96,7 +107,7 @@ module Jara
       it 'checks out a clean copy of the code' do
         production_releaser.build_artifact
         command = executed_commands.find { |c| c.start_with?('git clone') }
-        command.split(' ')[2].should == project_dir
+        command.split(' ')[2].should == Dir.getwd
         command.should include("git checkout #{master_sha}")
       end
 
@@ -119,7 +130,7 @@ module Jara
         production_releaser.build_artifact
         file_name = archive_options.last[:jar_name]
         components = file_name.split('.').first.split('-')
-        components[0].should == 'jara'
+        components[0].should == 'fake_app'
         components[2].should start_with(Time.now.utc.strftime('%Y%m%d%H%M'))
         components[3].should == master_sha[0, 8]
         file_name.should end_with('.jar')
@@ -137,17 +148,17 @@ module Jara
       end
 
       it 'copies the artifact to the project\'s build directory, creating it if necessary' do
-        environment_build_dir = File.join(project_dir, 'build', 'production')
+        environment_build_dir = File.join(Dir.getwd, 'build', 'production')
         production_releaser.build_artifact
         file_system.should have_received(:mkdir_p).with(environment_build_dir)
-        file_system.should have_received(:cp).with(/^build\/jara-.+\.jar$/, environment_build_dir)
+        file_system.should have_received(:cp).with(/^build\/fake_app-.+\.jar$/, environment_build_dir)
       end
 
       it 'returns the path to the artifact' do
-        environment_build_dir = File.join(project_dir, 'build', 'production')
+        environment_build_dir = File.join(Dir.getwd, 'build', 'production')
         path = production_releaser.build_artifact
         path.should start_with(environment_build_dir)
-        path.should match(/jara-.+\.jar$/)
+        path.should match(/fake_app-.+\.jar$/)
       end
 
       context 'when the project directory can\'t be found' do
