@@ -87,6 +87,11 @@ describe 'Jara' do
       run_package(@test_project_dir)
     end
 
+    it 'has a name that includes the SHA of the master branch' do
+      sha = isolated_run(@test_project_dir, 'git rev-parse master').strip
+      jar_path.should include(sha[0, 8])
+    end
+
     it 'includes the project files' do
       jar_entries.should include('META-INF/app.home/lib/test_project.rb')
     end
@@ -126,6 +131,11 @@ describe 'Jara' do
     before :all do
       isolated_run(@test_project_dir, 'git checkout -b staging', 'echo "puts \"Hello staging\"" > bin/check', 'git add .', 'git commit -m "Change the check message"', 'git push -u origin staging')
       run_package(@test_project_dir, 'staging')
+    end
+
+    it 'includes the SHA of the staging branch in the artifact name' do
+      sha = isolated_run(@test_project_dir, 'git rev-parse staging').strip
+      jar_path.should include(sha[0, 8])
     end
 
     it 'uses the staging branch' do
