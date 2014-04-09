@@ -44,7 +44,7 @@ describe 'Jara' do
 
   def rewrite_gemfile(tmp_dir)
     gemfile = File.read("#{tmp_dir}/test_project/Gemfile")
-    gemfile.gsub!(/^gem 'jara'.+$/, "gem 'jara', path: '#{File.expand_path('../../..', __FILE__)}'")
+    gemfile.gsub!(/^(\s*)gem 'jara'.+$/, "\\1gem 'jara', path: '#{File.expand_path('../../..', __FILE__)}'")
     File.open("#{tmp_dir}/test_project/Gemfile", 'w') { |io| io.write(gemfile) }
   end
 
