@@ -1,0 +1,5 @@
+$: << File.expand_path('../../lib', __FILE__)
+
+require 'test_project'
+
+puts "Hello from main #{Paint[TestProject::ARBITRARY_NUMBER, :red]}"

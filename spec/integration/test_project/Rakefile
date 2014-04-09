@@ -5,17 +5,14 @@ require 'jara'
 
 
 task :clean do
+  FileUtils.rm_rf('build')
 end
 
 namespace :package do
-  task :production do
-  end
-
-  task :staging do
-  end
-
-  task :test do
-    releaser = Jara::Releaser.new('test')
-    releaser.build_artifact
+  %w[production staging test].each do |environment|
+    task(environment) do
+      releaser = Jara::Releaser.new(environment)
+      releaser.build_artifact
+    end
   end
 end
