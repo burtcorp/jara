@@ -12,15 +12,28 @@ module JavaLang
 end
 
 describe 'Jara' do
-  def isolated_run(dir, cmd)
+  def isolated_run(dir, *commands)
     Dir.chdir(dir) do
       Bundler.with_clean_env do
-        command = %|rvm-shell $RUBY_VERSION@jara-test_project -c '#{cmd}' 2>&1|
-        output = %x|#{command}|
-        unless $?.success?
-          fail %(Command `#{command}` failed with output: #{output})
+        if ((s = ENV['EXEC_DEBUG']) && s.downcase.start_with?('y'))
+          outputs = commands.map do |command|
+            $stderr.puts("        $ #{command}")
+            output = %x|rvm-shell $RUBY_VERSION@jara-test_project -c '#{command}' 2>&1|
+            output.each_line { |line| $stderr.puts("        > #{line}") }
+            unless $?.success?
+              fail %(Command `#{command}` failed with output: #{output})
+            end
+            output
+          end
+          outputs.join("\n")
+        else
+          command = %|rvm-shell $RUBY_VERSION@jara-test_project -c '#{commands.join(' && ')}' 2>&1|
+          output = %x|#{command}|
+          unless $?.success?
+            fail %(Command `#{command}` failed with output: #{output})
+          end
+          output
         end
-        output
       end
     end
   end
@@ -36,18 +49,17 @@ describe 'Jara' do
   end
 
   def setup_git(project_dir)
-    command = (<<-END).lines.map(&:strip).join(' && ')
-    git init --bare ../repo.git
-    git init
-    git add . && git commit -m 'fist!'
-    git remote add origin ../repo.git
-    git push -u origin master
-    END
-    isolated_run(project_dir, command)
+    isolated_run(project_dir,
+      'git init --bare ../repo.git',
+      'git init',
+      'git add . && git commit -m "Fist!"',
+      'git remote add origin ../repo.git',
+      'git push -u origin master'
+    )
   end
 
-  def run_package(project_dir=Dir.getwd)
-    isolated_run(project_dir, 'bundle exec rake clean package:production')
+  def run_package(project_dir, environment='production')
+    isolated_run(project_dir, "bundle exec rake clean package:#{environment}")
   end
 
   before :all do
