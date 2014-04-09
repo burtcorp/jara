@@ -7,7 +7,7 @@ require 'jara/version'
 
 Gem::Specification.new do |s|
   s.name          = 'jara'
-  s.version       = Ione::VERSION.dup
+  s.version       = Jara::VERSION.dup
   s.authors       = ['Burt Platform Team']
   s.email         = ['theo@burtcorp.com']
   s.homepage      = 'http://github.com/burtcorp/jara'
