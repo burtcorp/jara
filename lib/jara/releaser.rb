@@ -23,18 +23,22 @@ module Jara
     end
 
     def build_artifact
-      date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
-      destination_dir = File.join(project_dir, 'build', @environment)
-      jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.jar'
-      Dir.mktmpdir do |path|
-        Dir.chdir(path) do
-          @shell.exec('git clone %s . && git checkout %s' % [project_dir, branch_sha])
-          @archiver.create(jar_name: jar_name)
-          @file_system.mkdir_p(destination_dir)
-          @file_system.cp("build/#{jar_name}", destination_dir)
+      if (artifact_path = find_artifact)
+        artifact_path
+      else
+        date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
+        destination_dir = File.join(project_dir, 'build', @environment)
+        jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.jar'
+        Dir.mktmpdir do |path|
+          Dir.chdir(path) do
+            @shell.exec('git clone %s . && git checkout %s' % [project_dir, branch_sha])
+            @archiver.create(jar_name: jar_name)
+            @file_system.mkdir_p(destination_dir)
+            @file_system.cp("build/#{jar_name}", destination_dir)
+          end
         end
+        File.join(destination_dir, jar_name)
       end
-      File.join(destination_dir, jar_name)
     end
 
     def release

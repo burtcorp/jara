@@ -208,6 +208,15 @@ module Jara
           expect { production_releaser.build_artifact }.to raise_error(JaraError, /master and origin\/master are not in sync/i)
         end
       end
+
+      context 'when an artifact for the current SHA already exists' do
+        it 'does not build a new artifact' do
+          FileUtils.mkdir_p('build/production')
+          FileUtils.touch("build/production/fake_app-production-201404091632-#{master_sha[0, 8]}.jar")
+          production_releaser.build_artifact
+          archiver.should_not have_received(:create)
+        end
+      end
     end
 
     describe '#release' do
