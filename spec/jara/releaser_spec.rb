@@ -60,16 +60,22 @@ module Jara
     end
 
     describe '#build_artifact' do
-      let :sha do
+      let :master_sha do
         'bdd18c1fce7213525a13d4d2d07fd42bc8f435b8'
+      end
+
+      let :staging_sha do
+        '13525a13d4d2d07fd4bdd18c1fce722bc8f435b8'
       end
 
       let :exec_handler do
         lambda do |command|
           case command
           when 'git rev-parse master && git rev-parse origin/master'
-            "#{sha}\n#{sha}\n"
-          when /^git clone \S+ \. \&\& git checkout #{sha}$/
+            "#{master_sha}\n#{master_sha}\n"
+          when 'git rev-parse staging && git rev-parse origin/staging'
+            "#{staging_sha}\n#{staging_sha}\n"
+          when /^git clone \S+ \. \&\& git checkout [a-f0-9]{40}$/
             nil
           else
             raise 'Unsupported command: `%s`' % command
@@ -91,7 +97,17 @@ module Jara
         production_releaser.build_artifact
         command = executed_commands.find { |c| c.start_with?('git clone') }
         command.split(' ')[2].should == project_dir
-        command.should include("git checkout #{sha}")
+        command.should include("git checkout #{master_sha}")
+      end
+
+      it 'uses the environment to determine which branch to check out' do
+        production_releaser.build_artifact
+        command = executed_commands.find { |c| c.include?("git checkout #{master_sha}") }
+        command.should_not be_empty
+        executed_commands.clear
+        staging_releaser.build_artifact
+        command = executed_commands.find { |c| c.include?("git checkout #{staging_sha}") }
+        command.should_not be_empty
       end
 
       it 'builds an artifact from the checked out code' do
@@ -99,15 +115,25 @@ module Jara
         archiver.should have_received(:create)
       end
 
-      it 'names the artifact from the project directory, UTC time and SHA' do
+      it 'includes the project directory name, UTC time and SHA in the artifact name' do
         production_releaser.build_artifact
         file_name = archive_options.last[:jar_name]
         components = file_name.split('.').first.split('-')
         components[0].should == 'jara'
-        components[1].should == 'production'
         components[2].should start_with(Time.now.utc.strftime('%Y%m%d%H%M'))
-        components[3].should == sha[0, 8]
+        components[3].should == master_sha[0, 8]
         file_name.should end_with('.jar')
+      end
+
+      it 'includes the environment in the artifact name' do
+        production_releaser.build_artifact
+        file_name = archive_options.last[:jar_name]
+        components = file_name.split('.').first.split('-')
+        components[1].should == 'production'
+        staging_releaser.build_artifact
+        file_name = archive_options.last[:jar_name]
+        components = file_name.split('.').first.split('-')
+        components[1].should == 'staging'
       end
 
       it 'copies the artifact to the project\'s build directory, creating it if necessary' do

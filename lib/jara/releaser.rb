@@ -15,7 +15,7 @@ module Jara
       @shell = options[:shell] || Shell.new
       @archiver = options[:archiver] || Archiver.new
       @file_system = options[:file_system] || FileUtils
-      @branch = 'master'
+      @branch = @environment == 'production' ? 'master' : @environment
     end
 
     def build_artifact

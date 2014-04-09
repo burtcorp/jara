@@ -98,4 +98,33 @@ describe 'Jara' do
       output.should include("Hello from main \e[31m52\e[0m\n")
     end
   end
+
+  context 'packaging the project when the latest version has not been pushed' do
+    it 'fails the build' do
+      isolated_run(@test_project_dir, 'touch foobaz', 'git add foobaz', 'git commit -m "foobaz the fizzbuzz"')
+      expect { run_package(@test_project_dir) }.to raise_error(%r{master and origin/master are not in sync})
+    end
+  end
+
+  context 'packaging the project for staging' do
+    let :jar_path do
+      File.expand_path(Dir["#{@test_project_dir}/build/staging/test_project-staging-*.jar"].first)
+    end
+
+    before :all do
+      isolated_run(@test_project_dir, 'git checkout -b staging', 'echo "puts \"Hello staging\"" > bin/check', 'git add .', 'git commit -m "Change the check message"', 'git push -u origin staging')
+      run_package(@test_project_dir, 'staging')
+    end
+
+    it 'uses the staging branch' do
+      output = isolated_run(Dir.tmpdir, %|java -jar #{jar_path} check|)
+      output.should include('Hello staging')
+    end
+
+    it 'uses the staging branch even when currently on another branch' do
+      isolated_run(@test_project_dir, 'git checkout master')
+      output = isolated_run(Dir.tmpdir, %|java -jar #{jar_path} check|)
+      output.should include('Hello staging')
+    end
+  end
 end
