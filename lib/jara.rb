@@ -3,3 +3,5 @@
 module Jara
   JaraError = Class.new(StandardError)
 end
+
+require 'jara/releaser'
