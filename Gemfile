@@ -1,6 +1,6 @@
 source 'https://rubygems.org/'
 
-gem 'puck'
+gemspec
 
 group :test do
   gem 'rspec'

@@ -1,3 +1,9 @@
+PATH
+  remote: .
+  specs:
+    jara (1.0.0-java)
+      puck
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -23,6 +29,6 @@ PLATFORMS
   java
 
 DEPENDENCIES
-  puck
+  jara!
   rspec
   simplecov
