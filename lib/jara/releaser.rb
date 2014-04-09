@@ -42,6 +42,7 @@ module Jara
     end
 
     def release
+      return if already_released?
       local_path = find_artifact || build_artifact
       upload_artifact(local_path)
     end
@@ -113,6 +114,11 @@ module Jara
           )
         end
       end
+    end
+
+    def already_released?
+      listing = s3.list_objects(bucket: @bucket_name, prefix: [@environment, app_name, "#{app_name}-#{@environment}-"].join('/'))
+      listing.contents.any? { |obj| obj.key.include?(branch_sha[0, 8]) }
     end
 
     class Shell

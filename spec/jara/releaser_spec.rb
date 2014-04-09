@@ -212,7 +212,7 @@ module Jara
       context 'when an artifact for the current SHA already exists' do
         it 'does not build a new artifact' do
           FileUtils.mkdir_p('build/production')
-          FileUtils.touch("build/production/fake_app-production-201404091632-#{master_sha[0, 8]}.jar")
+          FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.jar")
           production_releaser.build_artifact
           archiver.should_not have_received(:create)
         end
@@ -245,6 +245,7 @@ module Jara
         s3.stub(:put_object) do |options|
           s3_puts << options
         end
+        s3.stub(:list_objects).and_return(double(contents: []))
         file_system.stub(:cp) do |path, to_dir|
           FileUtils.mkdir_p(to_dir)
           File.open(File.join(to_dir, File.basename(path)), 'w') { |io| io.puts('foo') }
@@ -290,10 +291,31 @@ module Jara
 
       it 'uses an existing artifact for the same SHA' do
         FileUtils.mkdir_p('build/production')
-        File.open("build/production/fake_app-production-201404091632-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
+        File.open("build/production/fake_app-production-20140409163201-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
         production_releaser.release
         archiver.should_not have_received(:create)
         s3_puts.last[:content_md5].should == 'c157a79031e1c40f85931829bc5fc552'
+      end
+
+      context 'when an artifact for the same SHA already exists on S3' do
+        before do
+          objects = [
+            double(key: 'production/fake_app/fake_app-production-20140409163201-eaa6238a.jar'),
+            double(key: 'production/fake_app/fake_app-production-20140409180210-bdd18c1f.jar'),
+          ]
+          listing = double(contents: objects)
+          s3.stub(:list_objects).with(bucket: 'artifact-bucket', prefix: 'production/fake_app/fake_app-production-').and_return(listing)
+        end
+
+        it 'does not build the artifact' do
+          production_releaser.release
+          archiver.should_not have_received(:create)
+        end
+
+        it 'does not upload any artifact' do
+          production_releaser.release
+          s3.should_not have_received(:put_object)
+        end
       end
     end
   end
