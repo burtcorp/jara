@@ -1,0 +1,34 @@
+PATH
+  remote: ../../..
+  specs:
+    jara (1.0.0-java)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    coderay (1.1.0)
+    ffi (1.9.3-java)
+    jruby-jars (1.7.11)
+    method_source (0.8.2)
+    paint (0.8.7)
+    pry (0.9.12.6-java)
+      coderay (~> 1.0)
+      method_source (~> 0.8)
+      slop (~> 3.4)
+      spoon (~> 0.0)
+    puck (1.0.0.pre2)
+    rake (10.2.2)
+    slop (3.5.0)
+    spoon (0.0.4)
+      ffi
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  jara!
+  jruby-jars (= 1.7.11)
+  paint
+  pry
+  puck
+  rake

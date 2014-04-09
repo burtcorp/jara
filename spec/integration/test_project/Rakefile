@@ -1,0 +1,21 @@
+# encoding: utf-8
+
+require 'bundler/setup'
+require 'jara'
+
+
+task :clean do
+end
+
+namespace :package do
+  task :production do
+  end
+
+  task :staging do
+  end
+
+  task :test do
+    releaser = Jara::Releaser.new('test')
+    releaser.build_artifact
+  end
+end
