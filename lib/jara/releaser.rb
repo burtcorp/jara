@@ -18,7 +18,7 @@ module Jara
       @shell = options[:shell] || Shell.new
       @archiver = options[:archiver] || Archiver.new
       @file_system = options[:file_system] || FileUtils
-      @s3 = options[:s3] || Aws.s3
+      @s3 = options[:s3]
       @branch = @environment == 'production' ? 'master' : @environment
     end
 
@@ -49,6 +49,10 @@ module Jara
     private
 
     JAR_CONTENT_TYPE = 'application/java-archive'
+
+    def s3
+      @s3 ||= Aws.s3
+    end
 
     def app_name
       File.basename(project_dir)
@@ -99,7 +103,7 @@ module Jara
         remote_path = [@environment, app_name, File.basename(local_path)].join('/')
         content_md5 = Digest::MD5.file(local_path).hexdigest
         File.open(local_path, 'rb') do |io|
-          @s3.put_object(
+          s3.put_object(
             bucket: @bucket_name,
             key: remote_path,
             content_type: JAR_CONTENT_TYPE,
