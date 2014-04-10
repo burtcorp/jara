@@ -285,7 +285,8 @@ module Jara
 
       it 'sets metadata that includes who built the artifact and the full SHA' do
         production_releaser.release
-        s3_puts.last[:metadata].should include('packaged_by' => "#{ENV['USER']}@#{ENV['HOST']}")
+        s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
+        s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
         s3_puts.last[:metadata].should include('sha' => sha)
       end
 

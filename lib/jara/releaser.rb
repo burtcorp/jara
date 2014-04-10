@@ -6,6 +6,7 @@ require 'pathname'
 require 'puck'
 require 'digest/md5'
 require 'aws-sdk-core'
+require 'socket'
 
 
 module Jara
@@ -88,7 +89,7 @@ module Jara
 
     def metadata
       {
-        'packaged_by' => "#{ENV['USER']}@#{ENV['HOST']}",
+        'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
         'sha' => branch_sha
       }
     end
