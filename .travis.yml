@@ -1,0 +1,11 @@
+language: ruby
+rvm:
+  - jruby
+before_script:
+  - git config --global user.email "doe@example.com"
+  - git config --global user.name "J. Doe"
+script: bundle exec rake setup spec
+notifications:
+  campfire:
+    rooms:
+      secure: "cutipnDydTjN8xv/eYyKcNM1fAweLys4MR3BMO1tsl6xQQprwI8UiPhVB0uHknEe/YsOe3e2QFd7qxcPvuVTGeGQwsQD0KZajcBue6Ql6XbnbJbyKFUoEleG6ilS1v3TgW+VS1lnX5RFoHsWmX4nBJYvGyb7mlfR9oBrfhaq56M="
