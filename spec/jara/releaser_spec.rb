@@ -6,11 +6,11 @@ require 'spec_helper'
 module Jara
   describe Releaser do
     let :production_releaser do
-      described_class.new('production', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3)
+      described_class.new('production', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3, logger: logger)
     end
 
     let :staging_releaser do
-      described_class.new('staging', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3)
+      described_class.new('staging', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3, logger: logger)
     end
 
     let :shell do
@@ -27,6 +27,10 @@ module Jara
 
     let :s3 do
       double(:s3)
+    end
+
+    let :logger do
+      double(:logger)
     end
 
     let :executed_commands do
@@ -56,6 +60,11 @@ module Jara
       archiver.stub(:create) do |options|
         archive_options << options
       end
+    end
+
+    before do
+      logger.stub(:info)
+      logger.stub(:warn)
     end
 
     before do
@@ -125,6 +134,11 @@ module Jara
         command.should_not be_empty
       end
 
+      it 'logs the SHA and branch it checked out' do
+        production_releaser.build_artifact
+        logger.should have_received(:info).with(/checked out #{master_sha[0, 8]} from branch master/i)
+      end
+
       it 'builds an artifact from the checked out code' do
         production_releaser.build_artifact
         archiver.should have_received(:create)
@@ -149,6 +163,11 @@ module Jara
         file_name = archive_options.last[:jar_name]
         components = file_name.split('.').first.split('-')
         components[1].should == 'staging'
+      end
+
+      it 'logs the name of the artifact' do
+        production_releaser.build_artifact
+        logger.should have_received(:info).with(/created artifact fake_app-production-\d{14}-[a-f0-9]{8}\.jar/i)
       end
 
       it 'copies the artifact to the project\'s build directory, creating it if necessary' do
@@ -210,11 +229,19 @@ module Jara
       end
 
       context 'when an artifact for the current SHA already exists' do
-        it 'does not build a new artifact' do
+        before do
           FileUtils.mkdir_p('build/production')
           FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.jar")
+        end
+
+        it 'does not build a new artifact' do
           production_releaser.build_artifact
           archiver.should_not have_received(:create)
+        end
+
+        it 'logs a message saying that no new artifact was built, with the name of the existing' do
+          production_releaser.build_artifact
+          logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.jar/i)
         end
       end
     end
@@ -290,6 +317,11 @@ module Jara
         s3_puts.last[:metadata].should include('sha' => sha)
       end
 
+      it 'logs that the artifact was uploaded' do
+        production_releaser.release
+        logger.should have_received(:info).with(%r<artifact uploaded to s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+      end
+
       it 'uses an existing artifact for the same SHA' do
         FileUtils.mkdir_p('build/production')
         File.open("build/production/fake_app-production-20140409163201-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
@@ -316,6 +348,11 @@ module Jara
         it 'does not upload any artifact' do
           production_releaser.release
           s3.should_not have_received(:put_object)
+        end
+
+        it 'logs a message saying that the artifact was not uploaded, with the URI of the existing' do
+          production_releaser.release
+          logger.should have_received(:warn).with(%r<an artifact for #{sha[0, 8]} already exists: s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
         end
       end
     end

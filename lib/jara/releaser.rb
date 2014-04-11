@@ -20,11 +20,13 @@ module Jara
       @archiver = options[:archiver] || Archiver.new
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
+      @logger = options[:logger] || IoLogger.new($stderr)
       @branch = @environment == 'production' ? 'master' : @environment
     end
 
     def build_artifact
-      if (artifact_path = find_artifact)
+      if (artifact_path = find_local_artifact)
+        @logger.warn('An artifact for %s already exists: %s' % [branch_sha[0, 8], File.basename(artifact_path)])
         artifact_path
       else
         date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
@@ -33,9 +35,11 @@ module Jara
         Dir.mktmpdir do |path|
           Dir.chdir(path) do
             @shell.exec('git clone %s . && git checkout %s' % [project_dir, branch_sha])
+            @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
             @archiver.create(jar_name: jar_name)
             @file_system.mkdir_p(destination_dir)
             @file_system.cp("build/#{jar_name}", destination_dir)
+            @logger.info('Created artifact %s' % jar_name)
           end
         end
         File.join(destination_dir, jar_name)
@@ -43,9 +47,12 @@ module Jara
     end
 
     def release
-      return if already_released?
-      local_path = find_artifact || build_artifact
-      upload_artifact(local_path)
+      if obj = find_remote_artifact
+        @logger.warn('An artifact for %s already exists: s3://%s/%s' % [branch_sha[0, 8], @bucket_name, obj.key])
+      else
+        local_path = find_local_artifact || build_artifact
+        upload_artifact(local_path)
+      end
     end
 
     private
@@ -94,7 +101,7 @@ module Jara
       }
     end
 
-    def find_artifact
+    def find_local_artifact
       candidates = Dir[File.join(project_dir, 'build', @environment, '*.jar')]
       candidates.select! { |path| path.include?(branch_sha[0, 8]) }
       candidates.sort.last
@@ -114,12 +121,13 @@ module Jara
             body: io,
           )
         end
+        @logger.info('Artifact uploaded to s3://%s/%s' % [@bucket_name, remote_path])
       end
     end
 
-    def already_released?
+    def find_remote_artifact
       listing = s3.list_objects(bucket: @bucket_name, prefix: [@environment, app_name, "#{app_name}-#{@environment}-"].join('/'))
-      listing.contents.any? { |obj| obj.key.include?(branch_sha[0, 8]) }
+      listing.contents.find { |obj| obj.key.include?(branch_sha[0, 8]) }
     end
 
     class Shell
@@ -138,4 +146,25 @@ module Jara
       end
     end
   end
+
+  class IoLogger
+    def initialize(io)
+      @io = io
+    end
+
+    def info(msg)
+      @io.puts(msg)
+    end
+
+    def warn(msg)
+      @io.puts(msg)
+    end
+  end
+
+  class NullLogger
+    def info(*); end
+    def warn(*); end
+  end
+
+  NULL_LOGGER = NullLogger.new
 end
