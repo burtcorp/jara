@@ -55,6 +55,7 @@ module Jara
 
     def release
       raise JaraError, 'No environment set' unless @environment
+      raise JaraError, 'No bucket name set' unless @bucket_name
       if obj = find_remote_artifact
         @logger.warn('An artifact for %s already exists: s3://%s/%s' % [branch_sha[0, 8], @bucket_name, obj.key])
       else

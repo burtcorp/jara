@@ -357,8 +357,13 @@ module Jara
         s3_puts.last[:content_md5].should == 'c157a79031e1c40f85931829bc5fc552'
       end
 
-      it 'raises an error when the environment is nil' do
+      it 'raises an error when the environment is not set' do
         expect { test_releaser.release }.to raise_error(JaraError, /no environment set/i)
+      end
+
+      it 'raises an error when the bucket is not set' do
+        releaser = described_class.new('production', nil, shell: shell, archiver: archiver, file_system: file_system, logger: logger)
+        expect { releaser.release }.to raise_error(JaraError, /no bucket name set/i)
       end
 
       context 'when an artifact for the same SHA already exists on S3' do
