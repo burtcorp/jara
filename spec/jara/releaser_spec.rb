@@ -51,10 +51,6 @@ module Jara
       []
     end
 
-    let :project_dir do
-      File.expand_path('../../..', __FILE__)
-    end
-
     before do
       shell.stub(:exec) do |command|
         executed_commands << command
