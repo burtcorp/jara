@@ -13,6 +13,10 @@ module Jara
       described_class.new('staging', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3, logger: logger)
     end
 
+    let :test_releaser do
+      described_class.new(nil, nil, shell: shell, archiver: archiver, file_system: file_system, logger: logger)
+    end
+
     let :shell do
       double(:shell)
     end
@@ -38,7 +42,9 @@ module Jara
     end
 
     let :exec_handler do
-      lambda { }
+      lambda do |command|
+        raise 'Unsupported command: `%s`' % command
+      end
     end
 
     let :archive_options do
@@ -244,6 +250,31 @@ module Jara
           logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.jar/i)
         end
       end
+
+      context 'when building a test artifact' do
+        it 'builds an artifact from the project working directory and puts it in the build directory' do
+          app_dir = Dir.getwd
+          working_dir = nil
+          create_options = nil
+          archiver.stub(:create) do |options|
+            working_dir = Dir.getwd
+            create_options = options
+          end
+          path = nil
+          FileUtils.mkdir_p('foo')
+          Dir.chdir('foo') do
+            path = test_releaser.build_artifact
+          end
+          path.should == "#{app_dir}/build/fake_app.jar"
+          working_dir.should == app_dir
+          create_options.should eql(jar_name: 'fake_app.jar')
+        end
+
+        it 'logs that it builds a test artifact' do
+          test_releaser.build_artifact
+          logger.should have_received(:info).with(/created test artifact/i)
+        end
+      end
     end
 
     describe '#release' do
@@ -328,6 +359,10 @@ module Jara
         production_releaser.release
         archiver.should_not have_received(:create)
         s3_puts.last[:content_md5].should == 'c157a79031e1c40f85931829bc5fc552'
+      end
+
+      it 'raises an error when the environment is nil' do
+        expect { test_releaser.release }.to raise_error(JaraError, /no environment set/i)
       end
 
       context 'when an artifact for the same SHA already exists on S3' do

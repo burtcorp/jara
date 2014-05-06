@@ -25,7 +25,14 @@ module Jara
     end
 
     def build_artifact
-      if (artifact_path = find_local_artifact)
+      if @environment.nil?
+        jar_name = "#{app_name}.jar"
+        Dir.chdir(project_dir) do
+          @archiver.create(jar_name: jar_name)
+        end
+        @logger.info('Created test artifact')
+        File.join(project_dir, 'build', jar_name)
+      elsif (artifact_path = find_local_artifact)
         @logger.warn('An artifact for %s already exists: %s' % [branch_sha[0, 8], File.basename(artifact_path)])
         artifact_path
       else
@@ -47,6 +54,7 @@ module Jara
     end
 
     def release
+      raise JaraError, 'No environment set' unless @environment
       if obj = find_remote_artifact
         @logger.warn('An artifact for %s already exists: s3://%s/%s' % [branch_sha[0, 8], @bucket_name, obj.key])
       else

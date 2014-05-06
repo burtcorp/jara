@@ -9,10 +9,15 @@ task :clean do
 end
 
 namespace :package do
-  %w[production staging test].each do |environment|
+  %w[production staging].each do |environment|
     task(environment) do
       releaser = Jara::Releaser.new(environment, nil)
       releaser.build_artifact
     end
+  end
+
+  task 'test' do
+    releaser = Jara::Releaser.new(nil, nil)
+    releaser.build_artifact
   end
 end

@@ -149,4 +149,20 @@ describe 'Jara' do
       output.should include('Hello staging')
     end
   end
+
+  context 'packaging a test artifact from the working directory' do
+    let :jar_path do
+      File.expand_path("#{@test_project_dir}/build/test_project.jar")
+    end
+
+    before :all do
+      isolated_run(@test_project_dir, 'echo "puts \"Hello test\"" > bin/check')
+      run_package(@test_project_dir, 'test')
+    end
+
+    it 'includes unstaged changes' do
+      output = isolated_run(Dir.tmpdir, %|java -jar #{jar_path} check|)
+      output.should include('Hello test')
+    end
+  end
 end
