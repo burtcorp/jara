@@ -23,4 +23,4 @@ Before the artifact is built Jarå will check that _branch_name_ and origin/*bra
 
 # Copyright
 
-© 2014 Burt AB, all rights reserved
+© 2014 Burt AB, see LICENSE.txt (BSD 3-Clause).
