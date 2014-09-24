@@ -332,9 +332,9 @@ module Jara
         s3_puts.last[:content_type].should == 'application/java-archive'
       end
 
-      it 'uploads the artifact and sends its MD5 sum' do
+      it 'uploads the artifact and sends its MD5 sum as a Base64 encoded string' do
         production_releaser.release
-        s3_puts.last[:content_md5].should == 'd3b07384d113edec49eaa6238ad5ff00'
+        s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
       it 'sets metadata that includes who built the artifact and the full SHA' do
@@ -354,7 +354,7 @@ module Jara
         File.open("build/production/fake_app-production-20140409163201-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
         production_releaser.release
         archiver.should_not have_received(:create)
-        s3_puts.last[:content_md5].should == 'c157a79031e1c40f85931829bc5fc552'
+        s3_puts.last[:content_md5].should == 'wVenkDHhxA+FkxgpvF/FUg=='
       end
 
       it 'raises an error when the environment is not set' do

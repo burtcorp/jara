@@ -69,7 +69,7 @@ module Jara
     JAR_CONTENT_TYPE = 'application/java-archive'
 
     def s3
-      @s3 ||= Aws.s3
+      @s3 ||= Aws::S3::Client.new
     end
 
     def app_name
@@ -119,7 +119,7 @@ module Jara
     def upload_artifact(local_path)
       begin
         remote_path = [@environment, app_name, File.basename(local_path)].join('/')
-        content_md5 = Digest::MD5.file(local_path).hexdigest
+        content_md5 = Digest::MD5.file(local_path).base64digest
         File.open(local_path, 'rb') do |io|
           s3.put_object(
             bucket: @bucket_name,
