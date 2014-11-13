@@ -105,10 +105,23 @@ module Jara
       end
     end
 
+    def git_remote
+      @git_remote ||= @shell.exec('git config --get remote.origin.url')
+    end
+
+    def jruby_version
+      @jruby_version ||= begin
+        jruby_jars_path = $LOAD_PATH.grep(/\/jruby-jars/).first
+        jruby_jars_path && jruby_jars_path.scan(/\/jruby-jars-(.+)\//).flatten.first
+      end
+    end
+
     def metadata
       m = {
         'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
-        'sha' => branch_sha
+        'sha' => branch_sha,
+        'remote' => git_remote,
+        'jruby' => jruby_version,
       }
       m.merge!(@extra_metadata)
       m

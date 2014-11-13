@@ -86,11 +86,18 @@ module Jara
 
     around do |example|
       Dir.mktmpdir do |path|
-        app_dir = File.join(path, 'fake_app')
-        FileUtils.mkdir_p(app_dir)
-        Dir.chdir(app_dir) do
-          FileUtils.mkdir('.git')
-          example.call
+        fake_jruby_path = File.join(path, 'fake_gems', 'jruby-jars-9.9.9', 'lib')
+        FileUtils.mkdir_p(fake_jruby_path)
+        $LOAD_PATH << fake_jruby_path
+        begin
+          app_dir = File.join(path, 'fake_app')
+          FileUtils.mkdir_p(app_dir)
+          Dir.chdir(app_dir) do
+            FileUtils.mkdir('.git')
+            example.call
+          end
+        ensure
+          $LOAD_PATH.delete(fake_jruby_path)
         end
       end
     end
@@ -295,6 +302,8 @@ module Jara
             "#{sha}\n#{sha}\n"
           when /^git clone --local \S+ \. \&\& git checkout [a-f0-9]{40}$/
             nil
+          when 'git config --get remote.origin.url'
+            'git@example.com:foo/bar'
           else
             raise 'Unsupported command: `%s`' % command
           end
@@ -347,11 +356,15 @@ module Jara
         s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
-      it 'sets metadata that includes who built the artifact and the full SHA' do
+      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote and the JRuby version' do
         production_releaser.release
         s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
         s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
-        s3_puts.last[:metadata].should include('sha' => sha)
+        s3_puts.last[:metadata].should include(
+          'sha' => sha,
+          'remote' => 'git@example.com:foo/bar',
+          'jruby' => '9.9.9',
+        )
       end
 
       it 'includes extra metadata from the :metadata option' do
