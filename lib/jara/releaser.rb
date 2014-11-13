@@ -59,7 +59,9 @@ module Jara
       raise JaraError, 'No environment set' unless @environment
       raise JaraError, 'No bucket name set' unless @bucket_name
       if !@re_release && (obj = find_remote_artifact)
-        @logger.warn('An artifact for %s already exists: s3://%s/%s' % [branch_sha[0, 8], @bucket_name, obj.key])
+        s3_uri = 's3://%s/%s' % [@bucket_name, obj.key]
+        @logger.warn('An artifact for %s already exists: %s' % [branch_sha[0, 8], s3_uri])
+        s3_uri
       else
         local_path = find_local_artifact || build_artifact
         upload_artifact(local_path)
@@ -146,7 +148,9 @@ module Jara
           body: io,
         )
       end
-      @logger.info('Artifact uploaded to s3://%s/%s' % [@bucket_name, remote_path])
+      s3_uri = 's3://%s/%s' % [@bucket_name, remote_path]
+      @logger.info('Artifact uploaded to %s' % s3_uri)
+      s3_uri
     end
 
     def find_remote_artifact

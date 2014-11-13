@@ -391,6 +391,11 @@ module Jara
         s3_puts.last[:content_md5].should == 'wVenkDHhxA+FkxgpvF/FUg=='
       end
 
+      it 'returns the artifact URI' do
+        uri = production_releaser.release
+        uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+      end
+
       it 'raises an error when the environment is not set' do
         expect { test_releaser.release }.to raise_error(JaraError, /no environment set/i)
       end
@@ -423,6 +428,11 @@ module Jara
         it 'logs a message saying that the artifact was not uploaded, with the URI of the existing' do
           production_releaser.release
           logger.should have_received(:warn).with(%r<an artifact for #{sha[0, 8]} already exists: s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+        end
+
+        it 'returns the artifact URI' do
+          uri = production_releaser.release
+          uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
         end
 
         context 'and the option :re_release is true' do
