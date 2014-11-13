@@ -111,7 +111,7 @@ module Jara
             "#{master_sha}\n#{master_sha}\n"
           when 'git rev-parse staging && git rev-parse origin/staging'
             "#{staging_sha}\n#{staging_sha}\n"
-          when /^git clone \S+ \. \&\& git checkout [a-f0-9]{40}$/
+          when /^git clone --local \S+ \. \&\& git checkout [a-f0-9]{40}$/
             nil
           else
             raise 'Unsupported command: `%s`' % command
@@ -132,7 +132,7 @@ module Jara
       it 'checks out a clean copy of the code' do
         production_releaser.build_artifact
         command = executed_commands.find { |c| c.start_with?('git clone') }
-        command.split(' ')[2].should == Dir.getwd
+        command.split(' ')[3].should == Dir.getwd
         command.should include("git checkout #{master_sha}")
       end
 
@@ -210,7 +210,7 @@ module Jara
             case command
             when 'git rev-parse master && git rev-parse origin/master'
               "bdd18c1fce7213525a13d4d2d07fd42bc8f435b8\nbdd18c1fce7213525a13d4d2d07fd42bc8f435b8\n"
-            when /^git clone \S+ \. \&\& git checkout bdd18c1fce7213525a13d4d2d07fd42bc8f435b8$/
+            when /^git clone --local \S+ \. \&\& git checkout bdd18c1fce7213525a13d4d2d07fd42bc8f435b8$/
               raise ExecError, 'Bork fork'
             else
               raise 'Unsupported command: `%s`' % command
@@ -293,7 +293,7 @@ module Jara
           case command
           when /git rev-parse \w+ \&\& git rev-parse origin\/\w+/
             "#{sha}\n#{sha}\n"
-          when /^git clone \S+ \. \&\& git checkout [a-f0-9]{40}$/
+          when /^git clone --local \S+ \. \&\& git checkout [a-f0-9]{40}$/
             nil
           else
             raise 'Unsupported command: `%s`' % command
