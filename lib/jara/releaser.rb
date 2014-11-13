@@ -16,6 +16,7 @@ module Jara
     def initialize(environment, bucket_name, options={})
       @environment = environment
       @bucket_name = bucket_name
+      @re_release = options.fetch(:re_release, false)
       @shell = options[:shell] || Shell.new
       @archiver = options[:archiver] || Archiver.new
       @file_system = options[:file_system] || FileUtils
@@ -56,7 +57,7 @@ module Jara
     def release
       raise JaraError, 'No environment set' unless @environment
       raise JaraError, 'No bucket name set' unless @bucket_name
-      if obj = find_remote_artifact
+      if !@re_release && (obj = find_remote_artifact)
         @logger.warn('An artifact for %s already exists: s3://%s/%s' % [branch_sha[0, 8], @bucket_name, obj.key])
       else
         local_path = find_local_artifact || build_artifact

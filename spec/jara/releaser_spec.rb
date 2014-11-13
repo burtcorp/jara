@@ -6,15 +6,25 @@ require 'spec_helper'
 module Jara
   describe Releaser do
     let :production_releaser do
-      described_class.new('production', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3, logger: logger)
+      described_class.new('production', 'artifact-bucket', options)
     end
 
     let :staging_releaser do
-      described_class.new('staging', 'artifact-bucket', shell: shell, archiver: archiver, file_system: file_system, s3: s3, logger: logger)
+      described_class.new('staging', 'artifact-bucket', options)
     end
 
     let :test_releaser do
-      described_class.new(nil, nil, shell: shell, archiver: archiver, file_system: file_system, logger: logger)
+      described_class.new(nil, nil, options)
+    end
+
+    let :options do
+      {
+        :shell => shell,
+        :archiver => archiver,
+        :file_system => file_system,
+        :s3 => s3,
+        :logger => logger,
+      }
     end
 
     let :shell do
@@ -389,6 +399,22 @@ module Jara
         it 'logs a message saying that the artifact was not uploaded, with the URI of the existing' do
           production_releaser.release
           logger.should have_received(:warn).with(%r<an artifact for #{sha[0, 8]} already exists: s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+        end
+
+        context 'and the option :re_release is true' do
+          before do
+            options[:re_release] = true
+          end
+
+          it 'proceeds as if the artifact did not already exist' do
+            production_releaser.release
+            s3.should have_received(:put_object)
+          end
+
+          it 'does not list objects on S3' do
+            production_releaser.release
+            s3.should_not have_received(:list_objects)
+          end
         end
       end
     end
