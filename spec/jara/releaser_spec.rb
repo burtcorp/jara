@@ -118,7 +118,7 @@ module Jara
             "#{master_sha}\n#{master_sha}\n"
           when 'git rev-parse staging && git rev-parse origin/staging'
             "#{staging_sha}\n#{staging_sha}\n"
-          when /^git clone --local \S+ \. \&\& git checkout [a-f0-9]{40}$/
+          when /^git archive .+ [a-f0-9]{40}/
             nil
           else
             raise 'Unsupported command: `%s`' % command
@@ -126,7 +126,7 @@ module Jara
         end
       end
 
-      it 'moves to a temporary directory' do
+      it 'creates a clean copy of the code in a temporary directory' do
         working_dir = nil
         archiver.stub(:create) do
           os_x_cleaned_working_dir = Dir.getwd.sub(/^\/private/, '')
@@ -134,22 +134,21 @@ module Jara
         end
         production_releaser.build_artifact
         working_dir.should start_with(Dir.tmpdir)
-      end
-
-      it 'checks out a clean copy of the code' do
-        production_releaser.build_artifact
-        command = executed_commands.find { |c| c.start_with?('git clone') }
-        command.split(' ')[3].should == Dir.getwd
-        command.should include("git checkout #{master_sha}")
+        command = executed_commands.find { |c| c.start_with?('git archive') }
+        archive, unarchive = command.split(' | ')
+        archive.should include('--format=tar')
+        archive.should include("--prefix=#{File.basename(working_dir)}/")
+        archive.should end_with(master_sha)
+        unarchive.should eq("(cd #{File.dirname(working_dir)}/ && tar xf -)")
       end
 
       it 'uses the environment to determine which branch to check out' do
         production_releaser.build_artifact
-        command = executed_commands.find { |c| c.include?("git checkout #{master_sha}") }
+        command = executed_commands.grep(/^git archive .+ #{master_sha}/).first
         command.should_not be_empty
         executed_commands.clear
         staging_releaser.build_artifact
-        command = executed_commands.find { |c| c.include?("git checkout #{staging_sha}") }
+        command = executed_commands.grep(/^git archive .+ #{staging_sha}/).first
         command.should_not be_empty
       end
 
@@ -217,7 +216,7 @@ module Jara
             case command
             when 'git rev-parse master && git rev-parse origin/master'
               "bdd18c1fce7213525a13d4d2d07fd42bc8f435b8\nbdd18c1fce7213525a13d4d2d07fd42bc8f435b8\n"
-            when /^git clone --local \S+ \. \&\& git checkout bdd18c1fce7213525a13d4d2d07fd42bc8f435b8$/
+            when /^git archive .+ bdd18c1fce7213525a13d4d2d07fd42bc8f435b8/
               raise ExecError, 'Bork fork'
             else
               raise 'Unsupported command: `%s`' % command
@@ -300,7 +299,7 @@ module Jara
           case command
           when /git rev-parse \w+ \&\& git rev-parse origin\/\w+/
             "#{sha}\n#{sha}\n"
-          when /^git clone --local \S+ \. \&\& git checkout [a-f0-9]{40}$/
+          when /^git archive .+ [a-f0-9]{40}/
             nil
           when 'git config --get remote.origin.url'
             'git@example.com:foo/bar'

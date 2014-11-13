@@ -42,8 +42,8 @@ module Jara
         destination_dir = File.join(project_dir, 'build', @environment)
         jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.jar'
         Dir.mktmpdir do |path|
+          @shell.exec('git archive --format=tar --prefix=%s/ %s | (cd %s/ && tar xf -)' % [File.basename(path), branch_sha, File.dirname(path)])
           Dir.chdir(path) do
-            @shell.exec('git clone --local %s . && git checkout %s' % [project_dir, branch_sha])
             @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
             @archiver.create(jar_name: jar_name)
             @file_system.mkdir_p(destination_dir)
