@@ -17,6 +17,7 @@ module Jara
       @environment = environment
       @bucket_name = bucket_name
       @re_release = options.fetch(:re_release, false)
+      @extra_metadata = options[:metadata] || {}
       @shell = options[:shell] || Shell.new
       @archiver = options[:archiver] || Archiver.new
       @file_system = options[:file_system] || FileUtils
@@ -105,10 +106,12 @@ module Jara
     end
 
     def metadata
-      {
+      m = {
         'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
         'sha' => branch_sha
       }
+      m.merge!(@extra_metadata)
+      m
     end
 
     def find_local_artifact

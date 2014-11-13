@@ -354,6 +354,18 @@ module Jara
         s3_puts.last[:metadata].should include('sha' => sha)
       end
 
+      it 'includes extra metadata from the :metadata option' do
+        options[:metadata] = {'foo' => 'bar', 'hello' => 'world'}
+        production_releaser.release
+        s3_puts.last[:metadata].should include('foo' => 'bar', 'hello' => 'world')
+      end
+
+      it 'overwrites default metadata with the :metadata option' do
+        options[:metadata] = {'sha' => 'bar', 'packaged_by' => 'me'}
+        production_releaser.release
+        s3_puts.last[:metadata].should include('sha' => 'bar', 'packaged_by' => 'me')
+      end
+
       it 'logs that the artifact was uploaded' do
         production_releaser.release
         logger.should have_received(:info).with(%r<artifact uploaded to s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
