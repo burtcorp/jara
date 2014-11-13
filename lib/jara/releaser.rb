@@ -134,21 +134,19 @@ module Jara
     end
 
     def upload_artifact(local_path)
-      begin
-        remote_path = [@environment, app_name, File.basename(local_path)].join('/')
-        content_md5 = Digest::MD5.file(local_path).base64digest
-        File.open(local_path, 'rb') do |io|
-          s3.put_object(
-            bucket: @bucket_name,
-            key: remote_path,
-            content_type: JAR_CONTENT_TYPE,
-            content_md5: content_md5,
-            metadata: metadata,
-            body: io,
-          )
-        end
-        @logger.info('Artifact uploaded to s3://%s/%s' % [@bucket_name, remote_path])
+      remote_path = [@environment, app_name, File.basename(local_path)].join('/')
+      content_md5 = Digest::MD5.file(local_path).base64digest
+      File.open(local_path, 'rb') do |io|
+        s3.put_object(
+          bucket: @bucket_name,
+          key: remote_path,
+          content_type: JAR_CONTENT_TYPE,
+          content_md5: content_md5,
+          metadata: metadata,
+          body: io,
+        )
       end
+      @logger.info('Artifact uploaded to s3://%s/%s' % [@bucket_name, remote_path])
     end
 
     def find_remote_artifact
