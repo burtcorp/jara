@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    jara (1.0.1-java)
+    jara (1.1.0-java)
       aws-sdk-core
       puck
 
