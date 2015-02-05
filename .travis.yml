@@ -1,6 +1,10 @@
 language: ruby
 rvm:
   - jruby
+  - jruby-head
+matrix:
+  allow_failures:
+    - rvm: jruby-head
 before_script:
   - git config --global user.email "doe@example.com"
   - git config --global user.name "J. Doe"
