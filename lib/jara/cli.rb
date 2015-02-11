@@ -27,6 +27,9 @@ module Jara
         $stderr.puts('Unknown command "%s", expected "build" or "release"' % @command)
         exit(1)
       end
+    rescue OptionParser::ParseError => e
+      $stderr.puts(option_parser)
+      exit(1)
     rescue JaraError => e
       $stderr.puts(sprintf('Could not %s artifact: %s', @command, e.message))
       exit(1)
