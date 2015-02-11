@@ -13,12 +13,15 @@ end
 
 describe 'Jara' do
   def isolated_run(dir, *commands)
+    options = {}
+    options = commands.pop if commands.last.is_a?(Hash)
+    shell = options[:rvm] ? 'rvm-shell $RUBY_VERSION@jara-test_project' : 'bash'
     Dir.chdir(dir) do
       Bundler.with_clean_env do
         if ((s = ENV['EXEC_DEBUG']) && s.downcase.start_with?('y'))
           outputs = commands.map do |command|
             $stderr.puts("        $ #{command}")
-            output = %x|rvm-shell $RUBY_VERSION@jara-test_project -c '#{command}' 2>&1|
+            output = %x|#{shell} -c '#{command}' 2>&1|
             output.each_line { |line| $stderr.puts("        > #{line}") }
             unless $?.success?
               fail %(Command `#{command}` failed with output: #{output})
@@ -27,7 +30,7 @@ describe 'Jara' do
           end
           outputs.join("\n")
         else
-          command = %|rvm-shell $RUBY_VERSION@jara-test_project -c '#{commands.join(' && ')}' 2>&1|
+          command = %|#{shell} -c '#{commands.join(' && ')}' 2>&1|
           output = %x|#{command}|
           unless $?.success?
             fail %(Command `#{command}` failed with output: #{output})
@@ -59,7 +62,7 @@ describe 'Jara' do
   end
 
   def run_package(project_dir, environment='production')
-    isolated_run(project_dir, "bundle exec rake clean package:#{environment}")
+    isolated_run(project_dir, "bundle exec rake clean package:#{environment}", rvm: true)
   end
 
   before :all do
