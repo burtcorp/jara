@@ -17,6 +17,7 @@ module Jara
       @bucket_name = bucket_name
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
+      @build_command = options[:build_command]
       @shell = options[:shell] || Shell.new
       @archiver = create_archiver(options[:archiver])
       @file_system = options[:file_system] || FileUtils
@@ -44,6 +45,10 @@ module Jara
           @shell.exec('git archive --format=tar --prefix=%s/ %s | (cd %s/ && tar xf -)' % [File.basename(path), branch_sha, File.dirname(path)])
           Dir.chdir(path) do
             @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
+            if @build_command
+              @logger.info('Running build command: %s' % @build_command)
+              @shell.exec(@build_command)
+            end
             @archiver.create(archive_name: archive_name)
             @file_system.mkdir_p(destination_dir)
             @file_system.cp("build/#{archive_name}", destination_dir)

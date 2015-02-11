@@ -169,6 +169,7 @@ describe 'Jara' do
       command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara"
       command << " --environment #{environment}" if environment
       command << ' --archiver tgz'
+      command << ' --build-command "touch generated-file"'
       isolated_run(project_dir, command, rvm: true)
     end
 
@@ -201,6 +202,10 @@ describe 'Jara' do
       it 'includes the project files' do
         tar_entries.should include('index.html')
         tar_entries.should include('js/hello-world.js')
+      end
+
+      it 'includes files created by the build command' do
+        tar_entries.should include('generated-file')
       end
     end
 

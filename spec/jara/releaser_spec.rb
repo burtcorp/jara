@@ -292,6 +292,36 @@ module Jara
           logger.should have_received(:info).with(/created test artifact/i)
         end
       end
+
+      context 'when a command needs to be run before the artifact is created' do
+        let :releaser do
+          described_class.new('production', nil, options.merge(build_command: 'rake dist'))
+        end
+
+        it 'runs the command before the archiver is invoked' do
+          sequence = []
+          shell.stub(:exec).with('rake dist') { sequence << :build_command }
+          archiver.stub(:create) { sequence << :archiver }
+          releaser.build_artifact
+          sequence.should eql([:build_command, :archiver])
+        end
+
+        it 'logs the command it runs' do
+          shell.stub(:exec).with('rake dist')
+          releaser.build_artifact
+          logger.should have_received(:info).with('Running build command: rake dist')
+        end
+
+        context 'and the command fails' do
+          before do
+            shell.stub(:exec).with('rake dist').and_raise(ExecError.new(%(Command `rake dist` failed with output: bork fnork)))
+          end
+
+          it 'aborts' do
+            expect { releaser.build_artifact }.to raise_error(ExecError, /bork fnork/)
+          end
+        end
+      end
     end
 
     describe '#release' do
