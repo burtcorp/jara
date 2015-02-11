@@ -312,6 +312,29 @@ module Jara
           logger.should have_received(:info).with('Running build command: rake dist')
         end
 
+        context 'and the command responds to #call' do
+          let :command do
+            double(:command, call: nil)
+          end
+
+          let :releaser do
+            described_class.new('production', nil, options.merge(build_command: command))
+          end
+
+          it 'calls it instead of running it as a shell command' do
+            sequence = []
+            command.stub(:call) { sequence << :build_command }
+            archiver.stub(:create) { sequence << :archiver }
+            releaser.build_artifact
+            sequence.should eql([:build_command, :archiver])
+          end
+
+          it 'logs that it runs the command' do
+            releaser.build_artifact
+            logger.should have_received(:info).with('Running build command')
+          end
+        end
+
         context 'and the command fails' do
           before do
             shell.stub(:exec).with('rake dist').and_raise(ExecError.new(%(Command `rake dist` failed with output: bork fnork)))

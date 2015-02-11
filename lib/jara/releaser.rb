@@ -46,8 +46,13 @@ module Jara
           Dir.chdir(path) do
             @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
             if @build_command
-              @logger.info('Running build command: %s' % @build_command)
-              @shell.exec(@build_command)
+              if @build_command.respond_to?(:call)
+                @logger.info('Running build command')
+                @build_command.call
+              else
+                @logger.info('Running build command: %s' % @build_command)
+                @shell.exec(@build_command)
+              end
             end
             @archiver.create(archive_name: archive_name)
             @file_system.mkdir_p(destination_dir)

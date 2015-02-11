@@ -63,6 +63,18 @@ task :tarball do
 end
 ```
 
+The command can also be a Ruby proc, or anything that responds to `#call`:
+
+```ruby
+task :tarball do
+  build_command = lambda do
+    FileUtils.touch('very-important-file')
+  end
+  releaser = Jarå::Releaser.new('production', 'artifact-bucket', archiver: :tgz, build_command: build_command)
+  releaser.release
+end
+```
+
 or from the command line:
 
 ```

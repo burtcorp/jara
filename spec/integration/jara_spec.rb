@@ -92,6 +92,10 @@ describe 'Jara' do
           jar_entries.should include('META-INF/app.home/lib/test_project.rb')
         end
 
+        it 'includes files created by the build command' do
+          jar_entries.grep('META-INF/app.home/lib/generated_file.rb').should_not be_empty
+        end
+
         it 'includes the dependencies' do
           jar_entries.grep(%r{META-INF/gem.home/paint-[^/]+/lib/paint.rb}).should_not be_empty
         end

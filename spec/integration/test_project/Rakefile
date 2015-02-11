@@ -11,7 +11,10 @@ end
 namespace :package do
   %w[production staging].each do |environment|
     task(environment) do
-      releaser = Jara::Releaser.new(environment, nil)
+      build_command = lambda do
+        FileUtils.touch('lib/generated_file.rb')
+      end
+      releaser = Jara::Releaser.new(environment, nil, build_command: build_command)
       releaser.build_artifact
     end
   end
