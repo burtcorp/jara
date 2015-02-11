@@ -12,7 +12,7 @@ module Jara
   ExecError = Class.new(JaraError)
 
   class Releaser
-    def initialize(environment, bucket_name, options={})
+    def initialize(environment, bucket_name=nil, options={})
       @environment = environment
       @bucket_name = bucket_name
       @re_release = options.fetch(:re_release, false)
