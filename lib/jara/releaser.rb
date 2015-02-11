@@ -177,6 +177,8 @@ module Jara
           raise ExecError, %(Command `#{command}` failed with output: #{output})
         end
         output
+      rescue Errno::ENOENT => e
+        raise ExecError, %(Command `#{command}` failed: #{e.message})
       end
     end
 
