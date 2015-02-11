@@ -18,7 +18,7 @@ module Jara
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
       @shell = options[:shell] || Shell.new
-      @archiver = options[:archiver] || PuckArchiver.new(options)
+      @archiver = create_archiver(options[:archiver])
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
@@ -155,6 +155,23 @@ module Jara
       listing.contents.find { |obj| obj.key.include?(branch_sha[0, 8]) }
     end
 
+    def create_archiver(archiver)
+      case archiver
+      when :puck
+        PuckArchiver.new(@shell)
+      when :tar, :tgz
+        Tarchiver.new(@shell)
+      when nil
+        if defined? JRUBY_VERSION
+          create_archiver(:puck)
+        else
+          create_archiver(:tar)
+        end
+      else
+        archiver
+      end
+    end
+
     class Shell
       def exec(command)
         output = %x(#{command})
@@ -177,6 +194,23 @@ module Jara
       end
 
       def content_type
+      end
+    end
+
+    class Tarchiver < Archiver
+      def create(options)
+        FileUtils.mkdir_p('build')
+        entries = Dir['*']
+        entries.delete('build')
+        @shell.exec("tar czf build/#{options[:archive_name]} #{entries.join(' ')}")
+      end
+
+      def extension
+        'tgz'
+      end
+
+      def content_type
+        'application/x-gzip'
       end
     end
 
