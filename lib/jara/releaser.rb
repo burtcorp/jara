@@ -27,30 +27,30 @@ module Jara
 
     def build_artifact
       if @environment.nil?
-        jar_name = "#{app_name}.#{@archiver.extension}"
+        archive_name = "#{app_name}.#{@archiver.extension}"
         Dir.chdir(project_dir) do
-          @archiver.create(jar_name: jar_name)
+          @archiver.create(archive_name: archive_name)
         end
         @logger.info('Created test artifact')
-        File.join(project_dir, 'build', jar_name)
+        File.join(project_dir, 'build', archive_name)
       elsif (artifact_path = find_local_artifact)
         @logger.warn('An artifact for %s already exists: %s' % [branch_sha[0, 8], File.basename(artifact_path)])
         artifact_path
       else
         date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
         destination_dir = File.join(project_dir, 'build', @environment)
-        jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.' << @archiver.extension
+        archive_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.' << @archiver.extension
         Dir.mktmpdir do |path|
           @shell.exec('git archive --format=tar --prefix=%s/ %s | (cd %s/ && tar xf -)' % [File.basename(path), branch_sha, File.dirname(path)])
           Dir.chdir(path) do
             @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
-            @archiver.create(jar_name: jar_name)
+            @archiver.create(archive_name: archive_name)
             @file_system.mkdir_p(destination_dir)
-            @file_system.cp("build/#{jar_name}", destination_dir)
-            @logger.info('Created artifact %s' % jar_name)
+            @file_system.cp("build/#{archive_name}", destination_dir)
+            @logger.info('Created artifact %s' % archive_name)
           end
         end
-        File.join(destination_dir, jar_name)
+        File.join(destination_dir, archive_name)
       end
     end
 
@@ -184,6 +184,8 @@ module Jara
 
       class PuckArchiver < Archiver
         def create(options)
+          options = options.dup
+          options[:jar_name] = options.delete(:archive_name)
           Puck::Jar.new(options).create!
         end
 

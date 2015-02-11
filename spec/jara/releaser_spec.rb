@@ -164,7 +164,7 @@ module Jara
 
       it 'includes the project directory name, UTC time and SHA in the artifact name' do
         production_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[0].should == 'fake_app'
         components[2].should start_with(Time.now.utc.strftime('%Y%m%d%H%M'))
@@ -173,17 +173,17 @@ module Jara
 
       it 'lets the archiver choose the file extension' do
         production_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         file_name.should end_with('.bar')
       end
 
       it 'includes the environment in the artifact name' do
         production_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[1].should == 'production'
         staging_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[1].should == 'staging'
       end
@@ -284,7 +284,7 @@ module Jara
           end
           path.should == "#{app_dir}/build/fake_app.bar"
           working_dir.should == app_dir
-          create_options.should eql(jar_name: 'fake_app.bar')
+          create_options.should eql(archive_name: 'fake_app.bar')
         end
 
         it 'logs that it builds a test artifact' do
