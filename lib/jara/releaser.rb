@@ -3,7 +3,6 @@
 require 'tmpdir'
 require 'fileutils'
 require 'pathname'
-require 'puck'
 require 'digest/md5'
 require 'aws-sdk-core'
 require 'socket'
@@ -19,7 +18,7 @@ module Jara
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
       @shell = options[:shell] || Shell.new
-      @archiver = options[:archiver] || Archiver.new
+      @archiver = options[:archiver] || PuckArchiver.new(options)
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
@@ -28,7 +27,7 @@ module Jara
 
     def build_artifact
       if @environment.nil?
-        jar_name = "#{app_name}.jar"
+        jar_name = "#{app_name}.#{@archiver.extension}"
         Dir.chdir(project_dir) do
           @archiver.create(jar_name: jar_name)
         end
@@ -40,7 +39,7 @@ module Jara
       else
         date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
         destination_dir = File.join(project_dir, 'build', @environment)
-        jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.jar'
+        jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.' << @archiver.extension
         Dir.mktmpdir do |path|
           @shell.exec('git archive --format=tar --prefix=%s/ %s | (cd %s/ && tar xf -)' % [File.basename(path), branch_sha, File.dirname(path)])
           Dir.chdir(path) do
@@ -130,7 +129,7 @@ module Jara
     end
 
     def find_local_artifact
-      candidates = Dir[File.join(project_dir, 'build', @environment, '*.jar')]
+      candidates = Dir[File.join(project_dir, 'build', @environment, "*.#{@archiver.extension}")]
       candidates.select! { |path| path.include?(branch_sha[0, 8]) }
       candidates.sort.last
     end
@@ -169,8 +168,28 @@ module Jara
     end
 
     class Archiver
+      def initialize(shell)
+        @shell = shell
+      end
+
       def create(options)
-        Puck::Jar.new(options).create!
+      end
+
+      def extension
+      end
+    end
+
+    if defined? JRUBY_VERSION
+      require 'puck'
+
+      class PuckArchiver < Archiver
+        def create(options)
+          Puck::Jar.new(options).create!
+        end
+
+        def extension
+          'jar'
+        end
       end
     end
   end
