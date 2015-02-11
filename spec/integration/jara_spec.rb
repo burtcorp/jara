@@ -2,15 +2,6 @@
 
 require 'spec_helper'
 
-
-module JavaJar
-  include_package 'java.util.jar'
-end
-
-module JavaLang
-  include_package 'java.lang'
-end
-
 describe 'Jara' do
   def isolated_run(dir, *commands)
     options = {}
