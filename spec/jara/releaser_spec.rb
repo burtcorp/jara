@@ -32,7 +32,7 @@ module Jara
     end
 
     let :archiver do
-      double(:archiver, extension: 'bar')
+      double(:archiver, extension: 'bar', content_type: 'application/barbar')
     end
 
     let :file_system do
@@ -350,9 +350,9 @@ module Jara
         s3_puts.last[:key].should start_with('production/fake_app/fake_app-production-')
       end
 
-      it 'uploads the artifact with an appropriate content type' do
+      it 'uploads the artifact a the content type set by the archiver' do
         production_releaser.release
-        s3_puts.last[:content_type].should == 'application/java-archive'
+        s3_puts.last[:content_type].should == 'application/barbar'
       end
 
       it 'uploads the artifact and sends its MD5 sum as a Base64 encoded string' do

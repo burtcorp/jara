@@ -69,8 +69,6 @@ module Jara
 
     private
 
-    JAR_CONTENT_TYPE = 'application/java-archive'
-
     def s3
       @s3 ||= Aws::S3::Client.new
     end
@@ -141,7 +139,7 @@ module Jara
         s3.put_object(
           bucket: @bucket_name,
           key: remote_path,
-          content_type: JAR_CONTENT_TYPE,
+          content_type: @archiver.content_type,
           content_md5: content_md5,
           metadata: metadata,
           body: io,
@@ -177,6 +175,9 @@ module Jara
 
       def extension
       end
+
+      def content_type
+      end
     end
 
     if defined? JRUBY_VERSION
@@ -191,6 +192,10 @@ module Jara
 
         def extension
           'jar'
+        end
+
+        def content_type
+          'application/java-archive'
         end
       end
     end
