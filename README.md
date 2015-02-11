@@ -1,14 +1,18 @@
 # Jarå
 
-Jarå builds self-contained JARs of JRuby applications and publishes them to S3. It will check that you've pushed your code, check out a pristine copy from git, build a JAR and upload it to S3.
+Jarå creates clean artifacts from Git repositories and publishes them to S3. It will check that you've pushed your code, check out a pristine copy from git, build an artifact and upload it to S3 using a name that includes the date, time and Git SHA.
+
+In JRuby it will use [Puck](https://github.com/iconara/puck) to create a standalone JAR file by default, but you can also just create a tarball with the code.
 
 # Usage
 
-```
-# this will build an artifact from master and upload it to
-# the "artifact-bucket" on S3
-releaser = Jarå::Releaser.new('production', 'artifact-bucket')
-releaser.release
+You can use Jarå either from a `Rakefile` or from the command line. Here's an example from a `Rakefile` that builds an artifact from the master branch and uploads it to the `artifact-bucket` S3 bucket:
+
+```ruby
+task :release do
+  releaser = Jarå::Releaser.new('production', 'artifact-bucket')
+  releaser.release
+end
 ```
 
 The JAR artifact will be named from the project name, environment, date stamp and commit SHA, and will be uploaded with a path on S3 that also contains the environment and project name. The name of the directory that contains the code is assumed to be the project name.
@@ -20,6 +24,44 @@ If you change "production" to "staging" it will build an artifact from the stagi
 You may have noticed that specifying "production" created an artifact from the master branch, and "staging" used the staging branch. Using anything but "production" means that the branch name is assumed to be the same as the environment.
 
 Before the artifact is built Jarå will check that _branch_name_ and origin/*branch_name* point to the same commit. The reason for this is so that you don't release an artifact with a SHA that is not visible to others (this does not check that you've pulled before you release, but the important thing is to not release something that is not trackable).
+
+The same can be accomplished by running this from the command line:
+
+```
+$ jara --environment production --release --bucket artifact-bucket
+```
+
+If you would rather build a tarball you can do that like this:
+
+```ruby
+task :tarball do
+  releaser = Jarå::Releaser.new('production', 'artifact-bucket', archiver: :tgz)
+  releaser.release
+end
+```
+
+or from the command line:
+
+```
+$ jara --environment production --release --bucket artifact-bucket --archiver tgz
+```
+
+Sometimes your source code isn't enough to run the application. If you're using Jarå to create a tarball of a purely client side web application you might want to minify all JavaScript and CSS files before the artifact is created. This can be done like this (assuming you have a `Makefile` with a `minify` target):
+
+```ruby
+task :tarball do
+  releaser = Jarå::Releaser.new('production', 'artifact-bucket', archiver: :tgz, build_command: 'make minify')
+  releaser.release
+end
+```
+
+or from the command line:
+
+```
+$ jara --environment production --release --bucket artifact-bucket --archiver tgz --build-command 'make minify'
+```
+
+The command can be anything, as long as it can run from a cleanly checked out version of your repository.
 
 # Copyright
 
