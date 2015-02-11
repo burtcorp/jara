@@ -28,7 +28,7 @@ Before the artifact is built Jarå will check that _branch_name_ and origin/*bra
 The same can be accomplished by running this from the command line:
 
 ```
-$ jara --environment production --release --bucket artifact-bucket
+$ jara release --environment production --bucket artifact-bucket
 ```
 
 If you would rather build a tarball you can do that like this:
@@ -43,7 +43,7 @@ end
 or from the command line:
 
 ```
-$ jara --environment production --release --bucket artifact-bucket --archiver tgz
+$ jara release --environment production --bucket artifact-bucket --archiver tgz
 ```
 
 Sometimes your source code isn't enough to run the application. If you're using Jarå to create a tarball of a purely client side web application you might want to minify all JavaScript and CSS files before the artifact is created. This can be done like this (assuming you have a `Makefile` with a `minify` target):
@@ -58,7 +58,7 @@ end
 or from the command line:
 
 ```
-$ jara --environment production --release --bucket artifact-bucket --archiver tgz --build-command 'make minify'
+$ jara release --environment production --bucket artifact-bucket --archiver tgz --build-command 'make minify'
 ```
 
 The command can be anything, as long as it can run from a cleanly checked out version of your repository.
