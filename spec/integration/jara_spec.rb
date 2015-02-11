@@ -166,7 +166,7 @@ describe 'Jara' do
 
   context 'when creating a tarball' do
     def run_package(project_dir, environment='production')
-      command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara"
+      command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara build"
       command << " --environment #{environment}" if environment
       command << ' --archiver tgz'
       command << ' --build-command "touch generated-file"'
