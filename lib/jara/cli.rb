@@ -7,7 +7,7 @@ module Jara
   class Cli
     def initialize(argv)
       parse_options(argv)
-      @releaser = Jara::Releaser.new(@environment, @bucket, archiver: @type)
+      @releaser = Jara::Releaser.new(@environment, @bucket, archiver: @archiver)
     end
 
     def run
@@ -25,7 +25,7 @@ module Jara
         parser.on('-r', '--[no-]release', 'Release artifact to S3') { |r| @release = r }
         parser.on('-b', '--bucket=BUCKET', 'S3 bucket for releases') { |b| @bucket = b }
         parser.on('-e', '--environment=ENV', 'Environment to release to (e.g. production, staging)') { |e| @environment = e }
-        parser.on('-t', '--type=TYPE', 'Archive type (jar or tgz)') { |t| @type = t.to_sym }
+        parser.on('-a', '--archiver=TYPE', 'Archiver to use (jar or tgz)') { |t| @archiver = t.to_sym }
       end
       parser.parse(argv)
     end

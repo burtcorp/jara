@@ -168,7 +168,7 @@ describe 'Jara' do
     def run_package(project_dir, environment='production')
       command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara"
       command << " --environment #{environment}" if environment
-      command << ' --type tgz'
+      command << ' --archiver tgz'
       isolated_run(project_dir, command, rvm: true)
     end
 
