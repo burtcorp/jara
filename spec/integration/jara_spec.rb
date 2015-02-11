@@ -42,10 +42,6 @@ describe 'Jara' do
     File.open("#{tmp_dir}/#{name}/Gemfile", 'w') { |io| io.write(gemfile) }
   end
 
-  def run_package(project_dir, environment='production')
-    isolated_run(project_dir, "bundle exec rake clean package:#{environment}", rvm: true)
-  end
-
   def setup_git(project_dir)
     isolated_run(project_dir,
       'git init --bare ../repo.git',
@@ -58,6 +54,10 @@ describe 'Jara' do
 
   if defined? JRUBY_VERSION
     context 'when creating a self-contained JAR' do
+      def run_package(project_dir, environment='production')
+        isolated_run(project_dir, "bundle exec rake clean package:#{environment}", rvm: true)
+      end
+
       before :all do
         tmp_dir = Dir.mktmpdir
         @test_project_dir = "#{tmp_dir}/test_project"
@@ -165,6 +165,13 @@ describe 'Jara' do
   end
 
   context 'when creating a tarball' do
+    def run_package(project_dir, environment='production')
+      command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara"
+      command << " --environment #{environment}" if environment
+      command << ' --type tgz'
+      isolated_run(project_dir, command, rvm: true)
+    end
+
     before :all do
       tmp_dir = Dir.mktmpdir
       @test_project_dir = "#{tmp_dir}/another_test_project"
@@ -251,7 +258,7 @@ describe 'Jara' do
 
       before :all do
         isolated_run(@test_project_dir, 'mkdir -p bin && echo "puts \"Hello test\"" > bin/check')
-        run_package(@test_project_dir, 'test')
+        run_package(@test_project_dir, nil)
       end
 
       it 'includes unstaged changes' do
