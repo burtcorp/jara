@@ -18,9 +18,14 @@ Gem::Specification.new do |s|
   s.files         = Dir['lib/**/*.rb', 'README.md', 'LICENSE.txt', '.yardopts']
   s.require_paths = %w(lib)
 
-  s.platform = 'java'
   s.required_ruby_version = '>= 1.9.3'
 
-  s.add_dependency 'puck'
-  s.add_dependency 'aws-sdk-core'
+  if defined? JRUBY_VERSION
+    s.platform = 'java'
+    s.add_runtime_dependency 'puck'
+  else
+    s.platform = Gem::Platform::RUBY
+  end
+
+  s.add_runtime_dependency 'aws-sdk-core'
 end
