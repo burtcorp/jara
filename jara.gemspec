@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.summary       = %q{Builds and publishes JAR artifacts}
   s.description   = %q{Build self-contained JAR artifacts and publish them to S3}
 
-  s.files         = Dir['lib/**/*.rb', 'README.md', 'LICENSE.txt', '.yardopts']
+  s.files         = Dir['bin/*', 'lib/**/*.rb', 'README.md', 'LICENSE.txt', '.yardopts']
   s.require_paths = %w(lib)
   s.bindir        = 'bin'
   s.default_executable = s.name
