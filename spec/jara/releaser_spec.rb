@@ -32,7 +32,7 @@ module Jara
     end
 
     let :archiver do
-      double(:archiver, extension: 'bar', content_type: 'application/barbar')
+      double(:archiver, extension: 'bar', content_type: 'application/barbar', metadata: {'foo' => 'bar'})
     end
 
     let :file_system do
@@ -360,15 +360,19 @@ module Jara
         s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
-      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote and the JRuby version' do
+      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote' do
         production_releaser.release
         s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
         s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
         s3_puts.last[:metadata].should include(
           'sha' => sha,
           'remote' => 'git@example.com:foo/bar',
-          'jruby' => '9.9.9',
         )
+      end
+
+      it 'sets metadata from the archiver' do
+        production_releaser.release
+        s3_puts.last[:metadata].should include('foo' => 'bar')
       end
 
       it 'includes extra metadata from the :metadata option' do
