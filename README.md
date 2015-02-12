@@ -119,4 +119,4 @@ In all of the examples above Jarå has checked out a clean copy of your code bef
 
 # Copyright
 
-© 2014 Burt AB, see LICENSE.txt (BSD 3-Clause).
+© 2014-2015 Burt AB, see LICENSE.txt (BSD 3-Clause).
