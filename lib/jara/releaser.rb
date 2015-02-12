@@ -160,15 +160,15 @@ module Jara
 
     def create_archiver(archiver)
       case archiver
-      when :puck
+      when :puck, :jar
         PuckArchiver.new(@shell)
       when :tar, :tgz
         Tarchiver.new(@shell)
       when nil
-        if defined? JRUBY_VERSION
+        if defined? PuckArchiver
           create_archiver(:puck)
         else
-          create_archiver(:tar)
+          create_archiver(:tgz)
         end
       else
         archiver
@@ -224,32 +224,35 @@ module Jara
     end
 
     if defined? JRUBY_VERSION
-      require 'puck'
+      begin
+        require 'puck'
 
-      class PuckArchiver < Archiver
-        def create(options)
-          options = options.dup
-          options[:jar_name] = options.delete(:archive_name)
-          Puck::Jar.new(options).create!
-        end
+        class PuckArchiver < Archiver
+          def create(options)
+            options = options.dup
+            options[:jar_name] = options.delete(:archive_name)
+            Puck::Jar.new(options).create!
+          end
 
-        def extension
-          'jar'
-        end
+          def extension
+            'jar'
+          end
 
-        def content_type
-          'application/java-archive'
-        end
+          def content_type
+            'application/java-archive'
+          end
 
-        def metadata
-          jruby_jars_path = $LOAD_PATH.grep(/\/jruby-jars/).first
-          jruby_version = jruby_jars_path && jruby_jars_path.scan(/\/jruby-jars-(.+)\//).flatten.first
-          if jruby_version
-            super.merge('jruby' => jruby_version)
-          else
-            super
+          def metadata
+            jruby_jars_path = $LOAD_PATH.grep(/\/jruby-jars/).first
+            jruby_version = jruby_jars_path && jruby_jars_path.scan(/\/jruby-jars-(.+)\//).flatten.first
+            if jruby_version
+              super.merge('jruby' => jruby_version)
+            else
+              super
+            end
           end
         end
+      rescue LoadError
       end
     end
   end

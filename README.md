@@ -2,7 +2,18 @@
 
 Jarå creates clean artifacts from Git repositories and publishes them to S3. It will check that you've pushed your code, check out a pristine copy from git, build an artifact and upload it to S3 using a name that includes the date, time and Git SHA.
 
-In JRuby it will use [Puck](https://github.com/iconara/puck) to create a standalone JAR file by default, but you can also just create a tarball with the code.
+In JRuby it can use [Puck](https://github.com/iconara/puck) to create a standalone JAR file that can be run with `java -jar …`.
+
+# Installation
+
+```ruby
+group :development do
+  gem 'jara'
+  gem 'puck', platform: 'jruby'
+end
+```
+
+Puck is optional, and only available in JRuby. If Puck is present it will be the default archiver (see below for how to configure this).
 
 # Usage
 
@@ -53,6 +64,8 @@ or from the command line:
 ```
 $ jara release --environment production --bucket artifact-bucket --archiver tgz
 ```
+
+The `tgz` archiver is the default when Puck is not installed.
 
 Sometimes your source code isn't enough to run the application. If you're using Jarå to create a tarball of a purely client side web application you might want to minify all JavaScript and CSS files before the artifact is created. This can be done like this (assuming you have a `Makefile` with a `minify` target):
 
