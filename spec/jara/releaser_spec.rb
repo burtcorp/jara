@@ -32,7 +32,7 @@ module Jara
     end
 
     let :archiver do
-      double(:archiver)
+      double(:archiver, extension: 'bar', content_type: 'application/barbar', metadata: {'foo' => 'bar'})
     end
 
     let :file_system do
@@ -164,42 +164,47 @@ module Jara
 
       it 'includes the project directory name, UTC time and SHA in the artifact name' do
         production_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[0].should == 'fake_app'
         components[2].should start_with(Time.now.utc.strftime('%Y%m%d%H%M'))
         components[3].should == master_sha[0, 8]
-        file_name.should end_with('.jar')
+      end
+
+      it 'lets the archiver choose the file extension' do
+        production_releaser.build_artifact
+        file_name = archive_options.last[:archive_name]
+        file_name.should end_with('.bar')
       end
 
       it 'includes the environment in the artifact name' do
         production_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[1].should == 'production'
         staging_releaser.build_artifact
-        file_name = archive_options.last[:jar_name]
+        file_name = archive_options.last[:archive_name]
         components = file_name.split('.').first.split('-')
         components[1].should == 'staging'
       end
 
       it 'logs the name of the artifact' do
         production_releaser.build_artifact
-        logger.should have_received(:info).with(/created artifact fake_app-production-\d{14}-[a-f0-9]{8}\.jar/i)
+        logger.should have_received(:info).with(/created artifact fake_app-production-\d{14}-[a-f0-9]{8}\.bar/i)
       end
 
       it 'copies the artifact to the project\'s build directory, creating it if necessary' do
         environment_build_dir = File.join(Dir.getwd, 'build', 'production')
         production_releaser.build_artifact
         file_system.should have_received(:mkdir_p).with(environment_build_dir)
-        file_system.should have_received(:cp).with(/^build\/fake_app-.+\.jar$/, environment_build_dir)
+        file_system.should have_received(:cp).with(/^build\/fake_app-.+\.bar$/, environment_build_dir)
       end
 
       it 'returns the path to the artifact' do
         environment_build_dir = File.join(Dir.getwd, 'build', 'production')
         path = production_releaser.build_artifact
         path.should start_with(environment_build_dir)
-        path.should match(/fake_app-.+\.jar$/)
+        path.should match(/fake_app-.+\.bar$/)
       end
 
       context 'when the project directory can\'t be found' do
@@ -249,7 +254,7 @@ module Jara
       context 'when an artifact for the current SHA already exists' do
         before do
           FileUtils.mkdir_p('build/production')
-          FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.jar")
+          FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.bar")
         end
 
         it 'does not build a new artifact' do
@@ -259,7 +264,7 @@ module Jara
 
         it 'logs a message saying that no new artifact was built, with the name of the existing' do
           production_releaser.build_artifact
-          logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.jar/i)
+          logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.bar/i)
         end
       end
 
@@ -277,14 +282,67 @@ module Jara
           Dir.chdir('foo') do
             path = test_releaser.build_artifact
           end
-          path.should == "#{app_dir}/build/fake_app.jar"
+          path.should == "#{app_dir}/build/fake_app.bar"
           working_dir.should == app_dir
-          create_options.should eql(jar_name: 'fake_app.jar')
+          create_options.should eql(archive_name: 'fake_app.bar')
         end
 
         it 'logs that it builds a test artifact' do
           test_releaser.build_artifact
           logger.should have_received(:info).with(/created test artifact/i)
+        end
+      end
+
+      context 'when a command needs to be run before the artifact is created' do
+        let :releaser do
+          described_class.new('production', nil, options.merge(build_command: 'rake dist'))
+        end
+
+        it 'runs the command before the archiver is invoked' do
+          sequence = []
+          shell.stub(:exec).with('rake dist') { sequence << :build_command }
+          archiver.stub(:create) { sequence << :archiver }
+          releaser.build_artifact
+          sequence.should eql([:build_command, :archiver])
+        end
+
+        it 'logs the command it runs' do
+          shell.stub(:exec).with('rake dist')
+          releaser.build_artifact
+          logger.should have_received(:info).with('Running build command: rake dist')
+        end
+
+        context 'and the command responds to #call' do
+          let :command do
+            double(:command, call: nil)
+          end
+
+          let :releaser do
+            described_class.new('production', nil, options.merge(build_command: command))
+          end
+
+          it 'calls it instead of running it as a shell command' do
+            sequence = []
+            command.stub(:call) { sequence << :build_command }
+            archiver.stub(:create) { sequence << :archiver }
+            releaser.build_artifact
+            sequence.should eql([:build_command, :archiver])
+          end
+
+          it 'logs that it runs the command' do
+            releaser.build_artifact
+            logger.should have_received(:info).with('Running build command')
+          end
+        end
+
+        context 'and the command fails' do
+          before do
+            shell.stub(:exec).with('rake dist').and_raise(ExecError.new(%(Command `rake dist` failed with output: bork fnork)))
+          end
+
+          it 'aborts' do
+            expect { releaser.build_artifact }.to raise_error(ExecError, /bork fnork/)
+          end
         end
       end
     end
@@ -345,9 +403,9 @@ module Jara
         s3_puts.last[:key].should start_with('production/fake_app/fake_app-production-')
       end
 
-      it 'uploads the artifact with an appropriate content type' do
+      it 'uploads the artifact a the content type set by the archiver' do
         production_releaser.release
-        s3_puts.last[:content_type].should == 'application/java-archive'
+        s3_puts.last[:content_type].should == 'application/barbar'
       end
 
       it 'uploads the artifact and sends its MD5 sum as a Base64 encoded string' do
@@ -355,15 +413,19 @@ module Jara
         s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
-      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote and the JRuby version' do
+      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote' do
         production_releaser.release
         s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
         s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
         s3_puts.last[:metadata].should include(
           'sha' => sha,
           'remote' => 'git@example.com:foo/bar',
-          'jruby' => '9.9.9',
         )
+      end
+
+      it 'sets metadata from the archiver' do
+        production_releaser.release
+        s3_puts.last[:metadata].should include('foo' => 'bar')
       end
 
       it 'includes extra metadata from the :metadata option' do
@@ -380,12 +442,12 @@ module Jara
 
       it 'logs that the artifact was uploaded' do
         production_releaser.release
-        logger.should have_received(:info).with(%r<artifact uploaded to s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+        logger.should have_received(:info).with(%r<artifact uploaded to s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.bar>i)
       end
 
       it 'uses an existing artifact for the same SHA' do
         FileUtils.mkdir_p('build/production')
-        File.open("build/production/fake_app-production-20140409163201-#{sha[0, 8]}.jar", 'w') { |io| io.puts('bar') }
+        File.open("build/production/fake_app-production-20140409163201-#{sha[0, 8]}.bar", 'w') { |io| io.puts('bar') }
         production_releaser.release
         archiver.should_not have_received(:create)
         s3_puts.last[:content_md5].should == 'wVenkDHhxA+FkxgpvF/FUg=='
@@ -393,7 +455,7 @@ module Jara
 
       it 'returns the artifact URI' do
         uri = production_releaser.release
-        uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+        uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.bar>i)
       end
 
       it 'raises an error when the environment is not set' do
@@ -408,8 +470,8 @@ module Jara
       context 'when an artifact for the same SHA already exists on S3' do
         before do
           objects = [
-            double(key: 'production/fake_app/fake_app-production-20140409163201-eaa6238a.jar'),
-            double(key: 'production/fake_app/fake_app-production-20140409180210-bdd18c1f.jar'),
+            double(key: 'production/fake_app/fake_app-production-20140409163201-eaa6238a.bar'),
+            double(key: 'production/fake_app/fake_app-production-20140409180210-bdd18c1f.bar'),
           ]
           listing = double(contents: objects)
           s3.stub(:list_objects).with(bucket: 'artifact-bucket', prefix: 'production/fake_app/fake_app-production-').and_return(listing)
@@ -427,12 +489,12 @@ module Jara
 
         it 'logs a message saying that the artifact was not uploaded, with the URI of the existing' do
           production_releaser.release
-          logger.should have_received(:warn).with(%r<an artifact for #{sha[0, 8]} already exists: s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+          logger.should have_received(:warn).with(%r<an artifact for #{sha[0, 8]} already exists: s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.bar>i)
         end
 
         it 'returns the artifact URI' do
           uri = production_releaser.release
-          uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.jar>i)
+          uri.should match(%r<s3://artifact-bucket/production/fake_app/fake_app-production-\d{14}-[a-f0-9]{8}\.bar>i)
         end
 
         context 'and the option :re_release is true' do

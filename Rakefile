@@ -6,21 +6,23 @@ require 'bundler/setup'
 
 
 namespace :setup do
-  task :test_project do
-    Dir.chdir('spec/integration/test_project') do
-      command = (<<-END).lines.map(&:strip).join(' && ')
-      rm -f Gemfile.lock
-      rvm-shell $RUBY_VERSION -c 'rvm gemset create jara-test_project'
-      rvm-shell $RUBY_VERSION@jara-test_project -c 'gem install bundler'
-      rvm-shell $RUBY_VERSION@jara-test_project -c 'bundle install --retry 3'
-      END
-      puts command
-      Bundler.clean_system(command)
+  task :test_projects do
+    %w[test_project another_test_project].each do |name|
+      Dir.chdir("spec/integration/#{name}") do
+        command = (<<-END).lines.map(&:strip).join(' && ')
+        rm -f Gemfile.lock
+        rvm-shell $RUBY_VERSION -c 'rvm gemset create jara-#{name}'
+        rvm-shell $RUBY_VERSION@jara-#{name} -c 'gem install bundler'
+        rvm-shell $RUBY_VERSION@jara-#{name} -c 'bundle install --retry 3'
+        END
+        puts command
+        Bundler.clean_system(command)
+      end
     end
   end
 end
 
-task :setup => ['setup:test_project']
+task :setup => ['setup:test_projects']
 
 
 require 'rspec/core/rake_task'

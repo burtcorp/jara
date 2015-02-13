@@ -3,7 +3,6 @@
 require 'tmpdir'
 require 'fileutils'
 require 'pathname'
-require 'puck'
 require 'digest/md5'
 require 'aws-sdk-core'
 require 'socket'
@@ -13,13 +12,14 @@ module Jara
   ExecError = Class.new(JaraError)
 
   class Releaser
-    def initialize(environment, bucket_name, options={})
+    def initialize(environment, bucket_name=nil, options={})
       @environment = environment
       @bucket_name = bucket_name
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
+      @build_command = options[:build_command]
       @shell = options[:shell] || Shell.new
-      @archiver = options[:archiver] || Archiver.new
+      @archiver = create_archiver(options[:archiver])
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
@@ -28,30 +28,39 @@ module Jara
 
     def build_artifact
       if @environment.nil?
-        jar_name = "#{app_name}.jar"
+        archive_name = "#{app_name}.#{@archiver.extension}"
         Dir.chdir(project_dir) do
-          @archiver.create(jar_name: jar_name)
+          @archiver.create(archive_name: archive_name)
         end
         @logger.info('Created test artifact')
-        File.join(project_dir, 'build', jar_name)
+        File.join(project_dir, 'build', archive_name)
       elsif (artifact_path = find_local_artifact)
         @logger.warn('An artifact for %s already exists: %s' % [branch_sha[0, 8], File.basename(artifact_path)])
         artifact_path
       else
         date_stamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
         destination_dir = File.join(project_dir, 'build', @environment)
-        jar_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.jar'
+        archive_name = [app_name, @environment, date_stamp, branch_sha[0, 8]].join('-') << '.' << @archiver.extension
         Dir.mktmpdir do |path|
           @shell.exec('git archive --format=tar --prefix=%s/ %s | (cd %s/ && tar xf -)' % [File.basename(path), branch_sha, File.dirname(path)])
           Dir.chdir(path) do
             @logger.info('Checked out %s from branch %s' % [branch_sha[0, 8], @branch])
-            @archiver.create(jar_name: jar_name)
+            if @build_command
+              if @build_command.respond_to?(:call)
+                @logger.info('Running build command')
+                @build_command.call
+              else
+                @logger.info('Running build command: %s' % @build_command)
+                @shell.exec(@build_command)
+              end
+            end
+            @archiver.create(archive_name: archive_name)
             @file_system.mkdir_p(destination_dir)
-            @file_system.cp("build/#{jar_name}", destination_dir)
-            @logger.info('Created artifact %s' % jar_name)
+            @file_system.cp("build/#{archive_name}", destination_dir)
+            @logger.info('Created artifact %s' % archive_name)
           end
         end
-        File.join(destination_dir, jar_name)
+        File.join(destination_dir, archive_name)
       end
     end
 
@@ -69,8 +78,6 @@ module Jara
     end
 
     private
-
-    JAR_CONTENT_TYPE = 'application/java-archive'
 
     def s3
       @s3 ||= Aws::S3::Client.new
@@ -111,26 +118,19 @@ module Jara
       @git_remote ||= @shell.exec('git config --get remote.origin.url')
     end
 
-    def jruby_version
-      @jruby_version ||= begin
-        jruby_jars_path = $LOAD_PATH.grep(/\/jruby-jars/).first
-        jruby_jars_path && jruby_jars_path.scan(/\/jruby-jars-(.+)\//).flatten.first
-      end
-    end
-
     def metadata
       m = {
         'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
         'sha' => branch_sha,
         'remote' => git_remote,
-        'jruby' => jruby_version,
       }
       m.merge!(@extra_metadata)
+      m.merge!(@archiver.metadata)
       m
     end
 
     def find_local_artifact
-      candidates = Dir[File.join(project_dir, 'build', @environment, '*.jar')]
+      candidates = Dir[File.join(project_dir, 'build', @environment, "*.#{@archiver.extension}")]
       candidates.select! { |path| path.include?(branch_sha[0, 8]) }
       candidates.sort.last
     end
@@ -142,7 +142,7 @@ module Jara
         s3.put_object(
           bucket: @bucket_name,
           key: remote_path,
-          content_type: JAR_CONTENT_TYPE,
+          content_type: @archiver.content_type,
           content_md5: content_md5,
           metadata: metadata,
           body: io,
@@ -158,6 +158,23 @@ module Jara
       listing.contents.find { |obj| obj.key.include?(branch_sha[0, 8]) }
     end
 
+    def create_archiver(archiver)
+      case archiver
+      when :puck, :jar
+        PuckArchiver.new(@shell)
+      when :tar, :tgz
+        Tarchiver.new(@shell)
+      when nil
+        if defined? PuckArchiver
+          create_archiver(:puck)
+        else
+          create_archiver(:tgz)
+        end
+      else
+        archiver
+      end
+    end
+
     class Shell
       def exec(command)
         output = %x(#{command})
@@ -165,12 +182,78 @@ module Jara
           raise ExecError, %(Command `#{command}` failed with output: #{output})
         end
         output
+      rescue Errno::ENOENT => e
+        raise ExecError, %(Command `#{command}` failed: #{e.message})
       end
     end
 
     class Archiver
+      def initialize(shell)
+        @shell = shell
+      end
+
       def create(options)
-        Puck::Jar.new(options).create!
+      end
+
+      def extension
+      end
+
+      def content_type
+      end
+
+      def metadata
+        {}
+      end
+    end
+
+    class Tarchiver < Archiver
+      def create(options)
+        FileUtils.mkdir_p('build')
+        entries = Dir['*']
+        entries.delete('build')
+        @shell.exec("tar czf build/#{options[:archive_name]} #{entries.join(' ')}")
+      end
+
+      def extension
+        'tgz'
+      end
+
+      def content_type
+        'application/x-gzip'
+      end
+    end
+
+    if defined? JRUBY_VERSION
+      begin
+        require 'puck'
+
+        class PuckArchiver < Archiver
+          def create(options)
+            options = options.dup
+            options[:jar_name] = options.delete(:archive_name)
+            Puck::Jar.new(options).create!
+          end
+
+          def extension
+            'jar'
+          end
+
+          def content_type
+            'application/java-archive'
+          end
+
+          def metadata
+            jruby_jars_path = $LOAD_PATH.grep(/\/jruby-jars/).first
+            jruby_version = jruby_jars_path && jruby_jars_path.scan(/\/jruby-jars-(.+)\//).flatten.first
+            if jruby_version
+              super.merge('jruby' => jruby_version)
+            else
+              super
+            end
+          end
+        end
+      rescue LoadError => e
+        raise unless e.message.include?('no such file to load -- puck')
       end
     end
   end

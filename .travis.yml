@@ -4,6 +4,7 @@ cache: bundler
 rvm:
   - jruby
   - jruby-head
+  - 2.2.0
 matrix:
   allow_failures:
     - rvm: jruby-head

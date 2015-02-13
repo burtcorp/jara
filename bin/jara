@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'jara/cli'
+
+Jara::Cli.new(ARGV).run
