@@ -252,7 +252,8 @@ module Jara
             end
           end
         end
-      rescue LoadError
+      rescue LoadError => e
+        raise unless e.message.include?('no such file to load -- puck')
       end
     end
   end
