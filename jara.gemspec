@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   s.files         = Dir['bin/*', 'lib/**/*.rb', 'README.md', 'LICENSE.txt', '.yardopts']
   s.require_paths = %w(lib)
   s.bindir        = 'bin'
-  s.default_executable = s.name
+  s.executables   = %w[jara]
 
   s.platform = Gem::Platform::RUBY
   s.required_ruby_version = '>= 1.9.3'
