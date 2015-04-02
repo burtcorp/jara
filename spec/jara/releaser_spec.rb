@@ -171,6 +171,14 @@ module Jara
         components[3].should == master_sha[0, 8]
       end
 
+      it 'uses the specified app name instead of the project directory name' do
+        options[:app_name] = 'test_app'
+        production_releaser.build_artifact
+        file_name = archive_options.last[:archive_name]
+        components = file_name.split('.').first.split('-')
+        components.first.should == 'test_app'
+      end
+
       it 'lets the archiver choose the file extension' do
         production_releaser.build_artifact
         file_name = archive_options.last[:archive_name]

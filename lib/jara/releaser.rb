@@ -18,6 +18,7 @@ module Jara
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
       @build_command = options[:build_command]
+      @app_name = options[:app_name]
       @shell = options[:shell] || Shell.new
       @archiver = create_archiver(options[:archiver])
       @file_system = options[:file_system] || FileUtils
@@ -84,7 +85,7 @@ module Jara
     end
 
     def app_name
-      File.basename(project_dir)
+      @app_name || File.basename(project_dir)
     end
 
     def project_dir
