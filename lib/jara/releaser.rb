@@ -132,7 +132,7 @@ module Jara
 
     def find_local_artifact
       candidates = Dir[File.join(project_dir, 'build', @environment, "*.#{@archiver.extension}")]
-      candidates.select! { |path| path.include?(branch_sha[0, 8]) }
+      candidates.select! { |path| path.match(/#{app_name}-\w+-\d{14}-#{branch_sha[0, 8]}/) }
       candidates.sort.last
     end
 

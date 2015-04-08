@@ -259,7 +259,7 @@ module Jara
         end
       end
 
-      context 'when an artifact for the current SHA already exists' do
+      context 'when an artifact for the current SHA and app name already exists' do
         before do
           FileUtils.mkdir_p('build/production')
           FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.bar")
@@ -273,6 +273,18 @@ module Jara
         it 'logs a message saying that no new artifact was built, with the name of the existing' do
           production_releaser.build_artifact
           logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.bar/i)
+        end
+      end
+
+      context 'when an artifact for the current SHA but for a different app name already exists' do
+        before do
+          FileUtils.mkdir_p('build/production')
+          FileUtils.touch("build/production/fake_app-other-production-20140409163201-#{master_sha[0, 8]}.bar")
+        end
+
+        it 'builds a new artifact' do
+          production_releaser.build_artifact
+          archiver.should have_received(:create)
         end
       end
 
