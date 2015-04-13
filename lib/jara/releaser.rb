@@ -172,7 +172,11 @@ module Jara
           create_archiver(:tgz)
         end
       else
-        archiver
+        if archiver.respond_to?(:new)
+          archiver.new(@shell)
+        else
+          archiver
+        end
       end
     end
 

@@ -20,7 +20,7 @@ module Jara
     let :options do
       {
         :shell => shell,
-        :archiver => archiver,
+        :archiver => archiver_factory,
         :file_system => file_system,
         :s3 => s3,
         :logger => logger,
@@ -29,6 +29,10 @@ module Jara
 
     let :shell do
       double(:shell)
+    end
+
+    let :archiver_factory do
+      double(:archiver_factory, new: archiver)
     end
 
     let :archiver do
@@ -310,6 +314,13 @@ module Jara
         it 'logs that it builds a test artifact' do
           test_releaser.build_artifact
           logger.should have_received(:info).with(/created test artifact/i)
+        end
+      end
+
+      context 'when the :archiver option is a class' do
+        it 'creates an archiver and passes it the shell' do
+          production_releaser.build_artifact
+          archiver_factory.should have_received(:new).with(shell)
         end
       end
 
