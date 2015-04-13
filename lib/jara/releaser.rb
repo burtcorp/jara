@@ -18,6 +18,7 @@ module Jara
       @re_release = options.fetch(:re_release, false)
       @extra_metadata = options[:metadata] || {}
       @build_command = options[:build_command]
+      @app_name = options[:app_name]
       @shell = options[:shell] || Shell.new
       @archiver = create_archiver(options[:archiver])
       @file_system = options[:file_system] || FileUtils
@@ -84,7 +85,7 @@ module Jara
     end
 
     def app_name
-      File.basename(project_dir)
+      @app_name || File.basename(project_dir)
     end
 
     def project_dir
@@ -131,7 +132,7 @@ module Jara
 
     def find_local_artifact
       candidates = Dir[File.join(project_dir, 'build', @environment, "*.#{@archiver.extension}")]
-      candidates.select! { |path| path.include?(branch_sha[0, 8]) }
+      candidates.select! { |path| path.match(/#{app_name}-\w+-\d{14}-#{branch_sha[0, 8]}/) }
       candidates.sort.last
     end
 
@@ -171,7 +172,11 @@ module Jara
           create_archiver(:tgz)
         end
       else
-        archiver
+        if archiver.respond_to?(:new)
+          archiver.new(@shell)
+        else
+          archiver
+        end
       end
     end
 

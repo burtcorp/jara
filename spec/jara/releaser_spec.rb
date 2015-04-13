@@ -20,7 +20,7 @@ module Jara
     let :options do
       {
         :shell => shell,
-        :archiver => archiver,
+        :archiver => archiver_factory,
         :file_system => file_system,
         :s3 => s3,
         :logger => logger,
@@ -29,6 +29,10 @@ module Jara
 
     let :shell do
       double(:shell)
+    end
+
+    let :archiver_factory do
+      double(:archiver_factory, new: archiver)
     end
 
     let :archiver do
@@ -171,6 +175,14 @@ module Jara
         components[3].should == master_sha[0, 8]
       end
 
+      it 'uses the specified app name instead of the project directory name' do
+        options[:app_name] = 'test_app'
+        production_releaser.build_artifact
+        file_name = archive_options.last[:archive_name]
+        components = file_name.split('.').first.split('-')
+        components.first.should == 'test_app'
+      end
+
       it 'lets the archiver choose the file extension' do
         production_releaser.build_artifact
         file_name = archive_options.last[:archive_name]
@@ -251,7 +263,7 @@ module Jara
         end
       end
 
-      context 'when an artifact for the current SHA already exists' do
+      context 'when an artifact for the current SHA and app name already exists' do
         before do
           FileUtils.mkdir_p('build/production')
           FileUtils.touch("build/production/fake_app-production-20140409163201-#{master_sha[0, 8]}.bar")
@@ -265,6 +277,18 @@ module Jara
         it 'logs a message saying that no new artifact was built, with the name of the existing' do
           production_releaser.build_artifact
           logger.should have_received(:warn).with(/an artifact for #{master_sha[0, 8]} already exists: fake_app-production-\d{14}-[a-f0-9]{8}\.bar/i)
+        end
+      end
+
+      context 'when an artifact for the current SHA but for a different app name already exists' do
+        before do
+          FileUtils.mkdir_p('build/production')
+          FileUtils.touch("build/production/fake_app-other-production-20140409163201-#{master_sha[0, 8]}.bar")
+        end
+
+        it 'builds a new artifact' do
+          production_releaser.build_artifact
+          archiver.should have_received(:create)
         end
       end
 
@@ -290,6 +314,13 @@ module Jara
         it 'logs that it builds a test artifact' do
           test_releaser.build_artifact
           logger.should have_received(:info).with(/created test artifact/i)
+        end
+      end
+
+      context 'when the :archiver option is a class' do
+        it 'creates an archiver and passes it the shell' do
+          production_releaser.build_artifact
+          archiver_factory.should have_received(:new).with(shell)
         end
       end
 
