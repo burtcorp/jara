@@ -324,6 +324,27 @@ module Jara
         end
       end
 
+      context 'when the archiver needs additional options' do
+        let :releaser do
+          described_class.new('production', nil, options.merge(archiver_options: extra_archive_options))
+        end
+
+        let :extra_archive_options do
+          {:some_important_option => 3}
+        end
+
+        it 'passes the value of the :archiver_options option to the archiver' do
+          releaser.build_artifact
+          archiver.should have_received(:create).with(hash_including(some_important_option: 3))
+        end
+
+        it 'does not override the archive name option' do
+          extra_archive_options[:archive_name] = 'thisiscompletelywrong'
+          releaser.build_artifact
+          archiver.should_not have_received(:create).with(hash_including(archive_name: 'thisiscompletelywrong'))
+        end
+      end
+
       context 'when a command needs to be run before the artifact is created' do
         let :releaser do
           described_class.new('production', nil, options.merge(build_command: 'rake dist'))

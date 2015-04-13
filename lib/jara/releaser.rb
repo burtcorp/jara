@@ -21,6 +21,7 @@ module Jara
       @app_name = options[:app_name]
       @shell = options[:shell] || Shell.new
       @archiver = create_archiver(options[:archiver])
+      @archiver_options = options[:archiver_options] || {}
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
@@ -31,7 +32,7 @@ module Jara
       if @environment.nil?
         archive_name = "#{app_name}.#{@archiver.extension}"
         Dir.chdir(project_dir) do
-          @archiver.create(archive_name: archive_name)
+          @archiver.create(@archiver_options.merge(archive_name: archive_name))
         end
         @logger.info('Created test artifact')
         File.join(project_dir, 'build', archive_name)
@@ -55,7 +56,7 @@ module Jara
                 @shell.exec(@build_command)
               end
             end
-            @archiver.create(archive_name: archive_name)
+            @archiver.create(@archiver_options.merge(archive_name: archive_name))
             @file_system.mkdir_p(destination_dir)
             @file_system.cp("build/#{archive_name}", destination_dir)
             @logger.info('Created artifact %s' % archive_name)
