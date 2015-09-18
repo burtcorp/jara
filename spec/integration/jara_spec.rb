@@ -3,31 +3,23 @@
 require 'spec_helper'
 
 describe 'Jara' do
+
+  VENDOR_PATH = File.expand_path('../../../vendor', __FILE__)
+
   def isolated_run(dir, *commands)
-    options = {}
-    options = commands.pop if commands.last.is_a?(Hash)
-    shell = options[:rvm] ? 'rvm-shell $RUBY_VERSION@jara-test_project' : 'bash'
     Dir.chdir(dir) do
       Bundler.with_clean_env do
-        if ((s = ENV['EXEC_DEBUG']) && s.downcase.start_with?('y'))
-          outputs = commands.map do |command|
-            $stderr.puts("        $ #{command}")
-            output = %x|#{shell} -c '#{command}' 2>&1|
-            output.each_line { |line| $stderr.puts("        > #{line}") }
-            unless $?.success?
-              fail %(Command `#{command}` failed with output: #{output})
-            end
-            output
-          end
-          outputs.join("\n")
-        else
-          command = %|#{shell} -c '#{commands.join(' && ')}' 2>&1|
-          output = %x|#{command}|
+        debug = (s = ENV['EXEC_DEBUG']) && s.downcase.start_with?('y')
+        outputs = commands.map do |command|
+          $stderr.puts("        $ #{command}") if debug
+          output = %x|#{command} 2>&1|
+          output.each_line { |line| $stderr.puts("        > #{line}") } if debug
           unless $?.success?
             fail %(Command `#{command}` failed with output: #{output})
           end
           output
         end
+        outputs.join("\n")
       end
     end
   end
@@ -46,20 +38,35 @@ describe 'Jara' do
     isolated_run(project_dir,
       'git init --bare ../repo.git',
       'git init',
-      'git add . && git commit -m "Fist!"',
+      'git add .',
+      'git commit -m "First!"',
       'git remote add origin ../repo.git',
       'git push -u origin master'
     )
   end
 
+  def bundle_env(dir)
+    {
+      'BUNDLE_GEMFILE' => File.join(dir, 'Gemfile'),
+      'BUNDLE_PATH' => Dir[File.join(VENDOR_PATH, File.basename(dir), '*', '*')].sort.last,
+    }.map { |k, v| "#{k}=#{v}" }.join(' ')
+  end
+
+  def tmp_dir
+    @tmp_dir ||= Dir.mktmpdir
+  end
+
+  after :all do
+    FileUtils.remove_entry_secure(tmp_dir)
+  end
+
   if defined? JRUBY_VERSION
     context 'when creating a self-contained JAR' do
       def run_package(project_dir, environment='production')
-        isolated_run(project_dir, "bundle exec rake clean package:#{environment}", rvm: true)
+        isolated_run(project_dir, "#{bundle_env(project_dir)} .bundle/bin/rake clean package:#{environment}")
       end
 
       before :all do
-        tmp_dir = Dir.mktmpdir
         @test_project_dir = "#{tmp_dir}/test_project"
         copy_test_project(tmp_dir)
         rewrite_gemfile(tmp_dir)
@@ -129,7 +136,13 @@ describe 'Jara' do
         end
 
         before :all do
-          isolated_run(@test_project_dir, 'git checkout -b staging', 'echo "puts \"Hello staging\"" > bin/check', 'git add .', 'git commit -m "Change the check message"', 'git push -u origin staging')
+          isolated_run(@test_project_dir,
+            'git checkout -b staging',
+            'echo "puts \"Hello staging\"" > bin/check',
+            'git add .',
+            'git commit -m "Change the check message"',
+            'git push -u origin staging'
+          )
           run_package(@test_project_dir, 'staging')
         end
 
@@ -170,15 +183,14 @@ describe 'Jara' do
 
   context 'when creating a tarball' do
     def run_package(project_dir, environment='production')
-      command = "bundle exec #{File.expand_path('../../..', __FILE__)}/bin/jara build"
+      command = '.bundle/bin/jara build'
       command << " --environment #{environment}" if environment
       command << ' --archiver tgz'
       command << ' --build-command "touch generated-file"'
-      isolated_run(project_dir, command, rvm: true)
+      isolated_run(project_dir, %(#{bundle_env(project_dir)} #{command}))
     end
 
     before :all do
-      tmp_dir = Dir.mktmpdir
       @test_project_dir = "#{tmp_dir}/another_test_project"
       copy_test_project(tmp_dir, 'another_test_project')
       rewrite_gemfile(tmp_dir, 'another_test_project')
@@ -266,7 +278,7 @@ describe 'Jara' do
       end
 
       before :all do
-        isolated_run(@test_project_dir, 'mkdir -p bin && echo "puts \"Hello test\"" > bin/check')
+        isolated_run(@test_project_dir, 'mkdir -p bin', 'echo "puts \"Hello test\"" > bin/check')
         run_package(@test_project_dir, nil)
       end
 
