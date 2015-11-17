@@ -49,7 +49,7 @@ describe 'Jara' do
     {
       'BUNDLE_GEMFILE' => File.join(dir, 'Gemfile'),
       'BUNDLE_PATH' => Dir[File.join(VENDOR_PATH, File.basename(dir), '*', '*')].sort.last,
-    }.map { |k, v| "#{k}=#{v}" }.join(' ')
+    }.map { |k, v| "#{k}=#{v.shellescape}" }.join(' ')
   end
 
   def tmp_dir
