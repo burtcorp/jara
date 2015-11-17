@@ -3,6 +3,7 @@
 $: << File.expand_path('../lib', __FILE__)
 
 require 'bundler/setup'
+require 'shellwords'
 
 VENDOR_PATH = File.expand_path('../vendor', __FILE__)
 
@@ -11,7 +12,7 @@ namespace :setup do
     %w[test_project another_test_project].each do |name|
       Dir.chdir("spec/integration/#{name}") do
         bundle_path = File.join(VENDOR_PATH, name)
-        command = "bundle install --retry=3 --gemfile=Gemfile --path=#{bundle_path} --binstubs=.bundle/bin"
+        command = "bundle install --retry=3 --gemfile=Gemfile --path=#{bundle_path.shellescape} --binstubs=.bundle/bin"
         puts command
         Bundler.clean_system(command)
       end
