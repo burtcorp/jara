@@ -14,7 +14,6 @@ namespace :setup do
         command = "bundle install --retry=3 --gemfile=Gemfile --path=#{bundle_path} --binstubs=.bundle/bin"
         puts command
         Bundler.clean_system(command)
-        rm_f '.bundle/config'
       end
     end
   end
