@@ -115,6 +115,10 @@ module Jara
         '13525a13d4d2d07fd4bdd18c1fce722bc8f435b8'
       end
 
+      let :another_branch_sha do
+        '4e9fd31a582eef0f071a3989dc892e5d8eb2b748'
+      end
+
       let :exec_handler do
         lambda do |command|
           case command
@@ -122,6 +126,8 @@ module Jara
             "#{master_sha}\n#{master_sha}\n"
           when 'git rev-parse staging && git rev-parse origin/staging'
             "#{staging_sha}\n#{staging_sha}\n"
+          when 'git rev-parse another_branch && git rev-parse origin/another_branch'
+            "#{another_branch_sha}\n#{another_branch_sha}\n"
           when /^git archive .+ [a-f0-9]{40}/
             nil
           else
@@ -153,6 +159,13 @@ module Jara
         executed_commands.clear
         staging_releaser.build_artifact
         command = executed_commands.grep(/^git archive .+ #{staging_sha}/).first
+        command.should_not be_empty
+      end
+
+      it 'allows branch to be specified in options' do
+        options[:branch] = 'another_branch'
+        production_releaser.build_artifact
+        command = executed_commands.grep(/^git archive .+ #{another_branch_sha}/).first
         command.should_not be_empty
       end
 
