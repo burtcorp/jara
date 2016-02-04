@@ -15,6 +15,7 @@ module Jara
       options = {}
       options[:archiver] = @archiver if @archiver
       options[:build_command] = @build_command if @build_command
+      options[:branch] = @branch if @branch
       releaser = Jara::Releaser.new(@environment, @bucket, options)
       case @command
       when /help|-h/
@@ -44,6 +45,7 @@ module Jara
         parser.separator 'Common options:'
         parser.on('-e', '--environment=ENV', 'Environment to release to (e.g. production, staging)') { |e| @environment = e }
         parser.on('-a', '--archiver=TYPE', 'Archiver to use (jar or tgz)') { |t| @archiver = t.to_sym }
+        parser.on('--branch=BRANCH', 'Branch to release from, if not same as environment (production must be released from master)') { |b| @branch = b }
         parser.on('-c', '--build-command=COMMAND', 'Command to run before creating the artifact') { |c| @build_command = c }
         parser.on('-h', '--help', 'Show this message') { @command = 'help' }
         parser.separator ''
