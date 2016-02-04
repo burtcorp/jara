@@ -164,9 +164,14 @@ module Jara
 
       it 'allows branch to be specified in options' do
         options[:branch] = 'another_branch'
-        production_releaser.build_artifact
+        staging_releaser.build_artifact
         command = executed_commands.grep(/^git archive .+ #{another_branch_sha}/).first
         command.should_not be_empty
+      end
+
+      it 'does not allow branch to be specified for production environment' do
+        options[:branch] = 'another_branch'
+        expect { production_releaser.build_artifact }.to raise_error(JaraError, /must be released from master/i)
       end
 
       it 'logs the SHA and branch it checked out' do

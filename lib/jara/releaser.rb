@@ -25,12 +25,13 @@ module Jara
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
-      @branch = if options[:branch]
-        options[:branch]
-      elsif @environment == 'production'
-        'master'
+      if @environment == 'production'
+        if options[:branch]
+          raise JaraError, 'Production must be released from master'
+        end
+        @branch = 'master'
       else
-        @environment
+        @branch = options[:branch] || @environment
       end
     end
 
