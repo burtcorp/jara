@@ -25,7 +25,14 @@ module Jara
       @file_system = options[:file_system] || FileUtils
       @s3 = options[:s3]
       @logger = options[:logger] || IoLogger.new($stderr)
-      @branch = @environment == 'production' ? 'master' : @environment
+      if @environment == 'production'
+        if options[:branch]
+          raise JaraError, 'Production must be released from master'
+        end
+        @branch = 'master'
+      else
+        @branch = options[:branch] || @environment
+      end
     end
 
     def build_artifact
