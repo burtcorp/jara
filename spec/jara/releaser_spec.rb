@@ -489,29 +489,31 @@ module Jara
         s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
-      it 'sets metadata that includes who built the artifact' do
-        production_releaser.release
-        s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
-        s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
-      end
+      context 'sets metadata that' do
+        it 'includes who built the artifact' do
+          production_releaser.release
+          s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
+          s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
+        end
 
-      it 'sets legacy metadata with the full SHA and the Git remote' do
-        production_releaser.release
-        s3_puts.last[:metadata].should include(
-          'sha' => sha,
-          'remote' => 'git@example.com:foo/bar',
-        )
-      end
+        it 'includes legacy details like SHA and Git remote' do
+          production_releaser.release
+          s3_puts.last[:metadata].should include(
+            'sha' => sha,
+            'remote' => 'git@example.com:foo/bar',
+          )
+        end
 
-      it 'sets Git metadata with the full SHA, the Git remote, author and title' do
-        production_releaser.release
-        s3_puts.last[:metadata].should include(
-          'git_sha' => sha,
-          'git_remote' => 'git@example.com:foo/bar',
-          'git_author_name' => 'Some Author',
-          'git_author_email' => 'email@example.com',
-          'git_title' => 'This is a commit doing something',
-        )
+        it 'includes Git details like the full SHA, remote, commit author and title' do
+          production_releaser.release
+          s3_puts.last[:metadata].should include(
+            'git_sha' => sha,
+            'git_remote' => 'git@example.com:foo/bar',
+            'git_author_name' => 'Some Author',
+            'git_author_email' => 'email@example.com',
+            'git_title' => 'This is a commit doing something',
+          )
+        end
       end
 
       it 'sets metadata from the archiver' do
