@@ -497,6 +497,14 @@ module Jara
         )
       end
 
+      it 'sets Git metadata with the full SHA, the Git remote, author and title' do
+        production_releaser.release
+        s3_puts.last[:metadata].should include(
+          'git_sha' => sha,
+          'git_remote' => 'git@example.com:foo/bar',
+        )
+      end
+
       it 'sets metadata from the archiver' do
         production_releaser.release
         s3_puts.last[:metadata].should include('foo' => 'bar')

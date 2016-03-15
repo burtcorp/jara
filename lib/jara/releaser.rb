@@ -133,9 +133,17 @@ module Jara
         'sha' => branch_sha,
         'remote' => git_remote,
       }
+      m.merge!(git_metadata)
       m.merge!(@extra_metadata)
       m.merge!(@archiver.metadata)
       m
+    end
+
+    def git_metadata
+      {
+        'git_sha' => branch_sha,
+        'git_remote' => git_remote,
+      }
     end
 
     def find_local_artifact
