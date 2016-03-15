@@ -431,6 +431,12 @@ module Jara
             nil
           when 'git config --get remote.origin.url'
             'git@example.com:foo/bar'
+          when "git show #{sha} -s --format=format:\"%aN\""
+            'Some Author'
+          when "git show #{sha} -s --format=format:\"%aE\""
+            'email@example.com'
+          when "git show #{sha} -s --format=format:\"%s\""
+            'This is a commit doing something'
           else
             raise 'Unsupported command: `%s`' % command
           end
@@ -502,6 +508,9 @@ module Jara
         s3_puts.last[:metadata].should include(
           'git_sha' => sha,
           'git_remote' => 'git@example.com:foo/bar',
+          'git_author_name' => 'Some Author',
+          'git_author_email' => 'email@example.com',
+          'git_title' => 'This is a commit doing something',
         )
       end
 

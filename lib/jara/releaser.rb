@@ -127,6 +127,18 @@ module Jara
       @git_remote ||= @shell.exec('git config --get remote.origin.url')
     end
 
+    def git_author_name
+      @git_author_name ||= @shell.exec('git show %s -s --format=format:"%%aN"' % [@branch_sha])
+    end
+
+    def git_author_email
+      @git_author_email ||= @shell.exec('git show %s -s --format=format:"%%aE"' % [@branch_sha])
+    end
+
+    def git_title
+      @git_title ||= @shell.exec('git show %s -s --format=format:"%%s"' % [@branch_sha])
+    end
+
     def metadata
       m = {
         'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
@@ -143,6 +155,9 @@ module Jara
       {
         'git_sha' => branch_sha,
         'git_remote' => git_remote,
+        'git_author_name' => git_author_name,
+        'git_author_email' => git_author_email,
+        'git_title' => git_title,
       }
     end
 
