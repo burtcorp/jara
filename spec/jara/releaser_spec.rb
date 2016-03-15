@@ -483,10 +483,14 @@ module Jara
         s3_puts.last[:content_md5].should == '07BzhNET7exJ6qYjitX/AA=='
       end
 
-      it 'sets metadata that includes who built the artifact, the full SHA, the Git remote' do
+      it 'sets metadata that includes who built the artifact' do
         production_releaser.release
         s3_puts.last[:metadata]['packaged_by'].should include(%x(whoami).strip)
         s3_puts.last[:metadata]['packaged_by'].should match(/^.+@.+$/)
+      end
+
+      it 'sets legacy metadata with the full SHA and the Git remote' do
+        production_releaser.release
         s3_puts.last[:metadata].should include(
           'sha' => sha,
           'remote' => 'git@example.com:foo/bar',
