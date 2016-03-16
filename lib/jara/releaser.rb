@@ -127,15 +127,38 @@ module Jara
       @git_remote ||= @shell.exec('git config --get remote.origin.url')
     end
 
+    def git_author_name
+      @git_author_name ||= @shell.exec('git show %s -s --format=format:"%%aN"' % [@branch_sha])
+    end
+
+    def git_author_email
+      @git_author_email ||= @shell.exec('git show %s -s --format=format:"%%aE"' % [@branch_sha])
+    end
+
+    def git_title
+      @git_title ||= @shell.exec('git show %s -s --format=format:"%%s"' % [@branch_sha])
+    end
+
     def metadata
       m = {
         'packaged_by' => "#{ENV['USER']}@#{Socket.gethostname}",
         'sha' => branch_sha,
         'remote' => git_remote,
       }
+      m.merge!(git_metadata)
       m.merge!(@extra_metadata)
       m.merge!(@archiver.metadata)
       m
+    end
+
+    def git_metadata
+      {
+        'git_sha' => branch_sha,
+        'git_remote' => git_remote,
+        'git_author_name' => git_author_name,
+        'git_author_email' => git_author_email,
+        'git_title' => git_title,
+      }
     end
 
     def find_local_artifact
