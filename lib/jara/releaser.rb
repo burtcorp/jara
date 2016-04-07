@@ -203,7 +203,9 @@ module Jara
           create_archiver(:tgz)
         end
       else
-        if archiver.respond_to?(:new)
+        if archiver.respond_to?(:call)
+          archiver.call(@shell)
+        elsif archiver.respond_to?(:new)
           archiver.new(@shell)
         else
           archiver

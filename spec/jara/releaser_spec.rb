@@ -342,6 +342,39 @@ module Jara
         end
       end
 
+      context 'when the :archiver option responds to #call' do
+        let :archiver_factory do
+          double(:archiver_factory, call: archiver)
+        end
+
+        it 'creates an archiver by calling #call' do
+          production_releaser.build_artifact
+          archiver_factory.should have_received(:call).with(shell)
+        end
+      end
+
+      context 'when the :archiver option responds to both #new and #call' do
+        let :archiver_factory do
+          double(:archiver_factory, call: archiver, new: archiver)
+        end
+
+        it 'creates an archiver by calling #call' do
+          production_releaser.build_artifact
+          archiver_factory.should have_received(:call).with(shell)
+        end
+      end
+
+      context 'when the :archiver option responds to neither #new nor #call' do
+        let :archiver_factory do
+          double(:archiver_factory, create: nil, extension: 'foo')
+        end
+
+        it 'uses the object as-is' do
+          production_releaser.build_artifact
+          archiver_factory.should have_received(:create)
+        end
+      end
+
       context 'when the archiver needs additional options' do
         let :releaser do
           described_class.new('production', nil, options.merge(archiver_options: extra_archive_options))
