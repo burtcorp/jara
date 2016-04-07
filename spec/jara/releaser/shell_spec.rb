@@ -41,9 +41,11 @@ module Jara
           end
         end
 
-        context 'when the command does not exist' do
-          it 'raises an error', pending: 'Not sure this is how it works anymore' do
-            expect { shell.exec('foo') }.to raise_error(ExecError, /Command `foo` failed:/)
+        unless defined? JRUBY_VERSION
+          context 'when the command does not exist' do
+            it 'raises an error' do
+              expect { shell.exec('foo') }.to raise_error(ExecError, /Command `foo` failed:/)
+            end
           end
         end
       end
