@@ -215,7 +215,7 @@ module Jara
       def exec(command)
         output = %x(#{command})
         unless $?.success?
-          raise ExecError, %(Command `#{command}` failed with output: #{output})
+          raise ExecError, %(Command `#{command}` failed with output: #{output.inspect})
         end
         output
       rescue Errno::ENOENT => e
