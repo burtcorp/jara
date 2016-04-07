@@ -3,3 +3,6 @@
 /pkg
 /tmp
 /Gemfile.lock
+/vendor
+/spec/integration/test_project/.bundle
+/spec/integration/another_test_project/.bundle
