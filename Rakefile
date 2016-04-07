@@ -3,18 +3,16 @@
 $: << File.expand_path('../lib', __FILE__)
 
 require 'bundler/setup'
+require 'shellwords'
 
+VENDOR_PATH = File.expand_path('../vendor', __FILE__)
 
 namespace :setup do
   task :test_projects do
     %w[test_project another_test_project].each do |name|
       Dir.chdir("spec/integration/#{name}") do
-        command = (<<-END).lines.map(&:strip).join(' && ')
-        rm -f Gemfile.lock
-        rvm-shell $RUBY_VERSION -c 'rvm gemset create jara-#{name}'
-        rvm-shell $RUBY_VERSION@jara-#{name} -c 'gem install bundler'
-        rvm-shell $RUBY_VERSION@jara-#{name} -c 'bundle install --retry 3'
-        END
+        bundle_path = File.join(VENDOR_PATH, name)
+        command = "bundle install --retry=3 --gemfile=Gemfile --path=#{bundle_path.shellescape} --binstubs=.bundle/bin"
         puts command
         Bundler.clean_system(command)
       end
