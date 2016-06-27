@@ -170,7 +170,7 @@ module Jara
     end
 
     def ascii(str)
-      str.to_s.encode(Encoding::ASCII, fallback: proc { |chr| sprintf('\u{%x}', chr.ord) })
+      str.to_s.gsub(/[^\u{20}-\u{7e}]/) { |chr| sprintf('\u{%x}', chr.ord) }
     end
 
     def find_local_artifact
