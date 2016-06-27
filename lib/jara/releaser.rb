@@ -161,6 +161,18 @@ module Jara
       }
     end
 
+    def ascii_metadata
+      m = {}
+      metadata.each do |key, value|
+        m[ascii(key)] = ascii(value)
+      end
+      m
+    end
+
+    def ascii(str)
+      str.to_s.encode(Encoding::ASCII, fallback: proc { |chr| sprintf('\u{%x}', chr.ord) })
+    end
+
     def find_local_artifact
       candidates = Dir[File.join(project_dir, 'build', @environment, "*.#{@archiver.extension}")]
       candidates.select! { |path| path.match(/#{app_name}-\w+-\d{14}-#{branch_sha[0, 8]}/) }
@@ -176,7 +188,7 @@ module Jara
           key: remote_path,
           content_type: @archiver.content_type,
           content_md5: content_md5,
-          metadata: metadata,
+          metadata: ascii_metadata,
           body: io,
         )
       end
