@@ -124,19 +124,19 @@ module Jara
     end
 
     def git_remote
-      @git_remote ||= @shell.exec('git config --get remote.origin.url')
+      @git_remote ||= @shell.exec('git config --get remote.origin.url').chomp
     end
 
     def git_author_name
-      @git_author_name ||= @shell.exec('git show %s -s --format=format:"%%aN"' % [@branch_sha])
+      @git_author_name ||= @shell.exec('git show %s -s --format=format:"%%aN"' % [@branch_sha]).chomp
     end
 
     def git_author_email
-      @git_author_email ||= @shell.exec('git show %s -s --format=format:"%%aE"' % [@branch_sha])
+      @git_author_email ||= @shell.exec('git show %s -s --format=format:"%%aE"' % [@branch_sha]).chomp
     end
 
     def git_title
-      @git_title ||= @shell.exec('git show %s -s --format=format:"%%s"' % [@branch_sha])
+      @git_title ||= @shell.exec('git show %s -s --format=format:"%%s"' % [@branch_sha]).chomp
     end
 
     def metadata
