@@ -104,7 +104,7 @@ describe 'Jara' do
         end
 
         it 'includes the dependencies' do
-          jar_entries.grep(%r{META-INF/gem.home/paint-[^/]+/lib/paint.rb}).should_not be_empty
+          jar_entries.grep(%r{META-INF/gem.home/.+/paint.rb}).should_not be_empty
         end
 
         it 'does not include dependencies from groups other than the default' do
