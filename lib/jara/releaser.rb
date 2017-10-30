@@ -4,9 +4,12 @@ require 'tmpdir'
 require 'fileutils'
 require 'pathname'
 require 'digest/md5'
-require 'aws-sdk-core'
 require 'socket'
-
+begin
+  require 'aws-sdk-s3'
+rescue LoadError
+  require 'aws-sdk-core'
+end
 
 module Jara
   ExecError = Class.new(JaraError)
